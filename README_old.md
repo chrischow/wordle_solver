@@ -1,70 +1,21 @@
 # A Data-Driven Approach to Optimal Play in Wordle
 
-Over the past two weeks, I started to see green, yellow, and black/white grids being posted on Facebook. Strange. Only last week did I learn of [Wordle](https://www.powerlanguage.co.uk/wordle/). And I was hooked, but not on playing the game with my own limited vocabulary, but on how to beat it with a programmtic approach.
+Over the past two weeks, I started to see green, yellow, and black/white grids being posted on Facebook. Strange. Only last week did I learn of [Wordle](https://www.powerlanguage.co.uk/wordle/). And I was hooked, but not on playing the game with my own limited vocabulary, but on how to beat it with a programmtic approach. This post outlines my solution for optimal Wordle play.
 
 ## The Game
-For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in as few steps as possible, and you only have six tries. On each guess, Wordle will tell you if each letter:
+For the uninitiated, Wordle is Mastermind for 5-letter words. You have six tries to guess the word. On each guess, Wordle will tell you if each letter:
 
 - Is in the right spot (green)
 - Is in the word, but the wrong spot (yellow)
 - Is not in the word at all (grey)
 
-That's all there is to it! It sounds simple, but the game isn't easy because of the sheer number of possibilities. What we are effectively doing is reducing a set of 2,315 possible solution words down to a single word in six tries. We have access to an additional 10,657 words that are accepted as guesses ("support words"), but realistically, we won't be able to remember offhand which words are candidates and which are solutions.
+That's all there is to it! It sounds simple, but the game isn't easy because of the sheer number of possibilities. You would need sound logical reasoning, a pretty good vocabulary, and some luck - *if you played the game by hand*.
+
+But, consider what is going on under the hood. What we are effectively doing is reducing a set of 2,315 possible words down to a single word in six tries. We have access to an additional 10,657 words that are accepted as guesses. These words are invaluable for the purposes of reducing the set of candidate words.
 
 > **Note:** The full sets of words can be retrieved from the website's main script. Use your browser's developer console to access it.
 
-## About This Post
-This post details my approach to design an optimal way to play the game. Unlike my other posts where I typically survey the literature, identify gaps, and state a clear area of contribution, this project was about discovering a solution for myself. Hence, I did not google for a programming solution beforehand. I primarily used simulation in Python to derive the key ideas for a strategy from scratch, and the only other source of ideas was my boss, Jerome, who is a seasoned programmer. A final note is that the ideas in this post were not written in chronological order - my thoughts and experimentation approach was much more non-linear than what will be presented.
-
 ## Game Strategy
-What I've come to make of the game is that it is played in 6 chronological steps: one for each guess that Wordle provides us. We will run through each step in order, supporting key insights with data from simulations.
-
-### Step 1: Filter Away
-In this step, we have 12,972 **candidates** to choose our first word from. As part of the solution approach, we make no distinctions between solutions (2,315 of them) and support words (10,657 of them), because we assume that a player would not know which category each word belongs to.
-
-Hence, it should be obvious that the first step is all about **filtering candidates**. We want to choose the candidate that helps us to reduce the candidate set as much as possible for our next guess. To figure out which word does this the best, we need a way to **rank** candidates. Here are some techniques I tested:
-
-1. **Global Letter Frequencies (GLF):** This is based on how popular each letter is, measured by the occurrence of each letter in a given set of words. For step 1, this would be the full list of 12,972 words. For step 2, it would be the filtered set of candidates available at that time. The score for each word is simply the sum of the occurrences of each of its constituent letters.
-2. **Positional Letter Frequencies (PLF):** This is based on how popular each letter is *in its position in the 5-letter word*. It is also measured by frequency of occurrence in words in a given set of words. Suppose you took all 12,972 words and stacked them on top of each other to get a really tall table with 5 columns. Treat each column as a discrete random variable. Then, each of these variables would have a certainty frequency distribution. Perhaps `s` occurs 1.5k times for the first letter of every word (or first column in the table) - that is what I term the letter frequency of `s` at position 1. The score for each word is simply the sum or average of the positional letter frequency of each of its constituent letters.
-
-To test for the better approach, I computed the GLF and PLF scores for each of the 12,972 words, took the top 100 from each ranking table, and ran each of those words against the 2,315 solution words. As an additional check, I also computed the improvement in the **solution space** (25 letters vs. 5 positions) to check how many position-and-letter possibilities were being eliminated.
-
-While there was a strong positive correlation between the decrease in the size of the candidate set and GLF (63%), there was almost no correlation between that and PLF (-1%). Hence, GLF seemed to be better than PLF for picking a good first word. But, at this stage, we're looking for good **words** to start with. Given that both approaches are wired differently and search a different set of words, we will pick the best 100 words from the combined GLF and PLF ranking table. We can then limit our search space to this set of words, and move on. 75 words were picked from GLF alone, 17 from PLF alone, and 8 were among the top words from GLF and PLF.
-
-### Step 2: Filter Again
-Nailing the problem on the second guess will earn you a lot of street cred precisely because it is an improbable outcome. However, optimal play places greater emphasis on the more likely outcomes, not so much the improbable ones. My tests are consistent with other posts on solving Wordle: most problems are solved within 4 steps.
-
-You can pre-select a word which is best **on average**, or you can use a ranking heuristic to automatically choose one. Choosing the former means that we would be neglecting the additional information gained from feedback on the first word. Choosing the latter allows us to be more adaptable. We will investigate both approaches.
-
-#### Pre-selected Word
-This approach enables us to be optimal on average, if we play a large number of games. It is easily implementable for a human: just remember the pair of words and use that every time. 
-
-We identify the top *word pairs* starting with the list of 100 words we selected earlier. For each one, we find the next word that fulfils the conditions below:
-
-1. Has a completely different set of letters from the first word
-2. Has the highest possible score on the ranking table (GLF or PLF, tested separately)
-
-Using the GLF ranking table, the top three pairs were `nares, doilt`, `tales, corni`, and `rales, tonic`. The top word from before (`soare`) is no longer near the top. This is because the first step is only one filter. In fact, the second filter matters more! The correlation between (1) the overall decrease in candidate set size from step 0 to step 2 and (2) the decrease in candidate set size from step 1 to step 2 was 76%. The correlation between (1) and (3) the decrease in candidate set size from step 0 to step 1 was 0.5%.
-
-Using the PLF ranking table, the top three pairs were 
-
-#### Adaptive Selection of 2nd Word
-This approach enables us to make use of the information gained from step 1, but requires a good ranking system to pick the next word. It is a risky approach because it is entirely possible that the feedback from step 1 is not informative, and the ranking system does not work well.
-
-> 
-
-We select the two words based on the percentage decrease in the candidate set from step 0 to step 2.
-
-
-Quit Trying to Slay the Dragon with 2 Hits
-In this step, we have fewer than 12,972 candidates to choose our second word from. 
-
-1. Force two vowels or not
-2. Completely different letters or not
-2. GLF or PLF
-
-
-
 In this post, I'll take you through my stages of thinking about the game and the development of a solution to play the game optimally (using Python):
 
 1. Intuition
@@ -72,7 +23,7 @@ In this post, I'll take you through my stages of thinking about the game and the
 3. Positional letter frequency
 4. Word popularity
 
- I did, however, glance at some non-technical posts that recommended the "best" words to try out along the way.
+Unlike my other posts where I typically survey the literature, identify gaps, and state a clear area of contribution, this project was about discovering a solution for myself. Hence, I did not google for a programming solution beforehand. I did, however, glance at some non-technical posts that recommended the "best" words to try out along the way.
 
 After writing the post, I found several solutions that were able to solve the game all the time. However, these were generally brute force approachecs that checked all 2,315 possible solutions in each iteration. This implicitly means that their systems were aware of what words were in the solution set and which weren't ("support" words).
 
