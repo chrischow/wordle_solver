@@ -1,6 +1,8 @@
 # A Data-Driven Approach to Optimal Play in Wordle
 
-Over the past two weeks, I started to see green, yellow, and black/white grids being posted on Facebook. Strange. Only last week did I learn of [Wordle](https://www.powerlanguage.co.uk/wordle/). And I was hooked, but not on playing the game with my own limited vocabulary, but on how to beat it with a programmtic approach.
+Over the past two weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - more on discovering a good strategy than on playing the game. And that started me on a journey to build a system to simulate games and derive insights on optimal play.
+
+Wordle and Wordle alone occupied my mind over the past weekend. However, as I progressed in building my solution, I started to see that I was operating with the faulty assumption that the optimal word guesses for a machine are also optimal for a human. Hence, I revised my approach from building a machine that was *neither realistic enough for a human nor optimised enough as a machine* to building two solutions: (a) a pretty optimised solver and (b) a human-like system. And these are the contributions of this post: (1) an explanation of why the "best" combinations of words for Wordle have limited utility, (2) a different approach for a solver implemented in Python (not necessarily the best or most optimised), and (3) a system designed to act in a more human fashion.
 
 ## The Game
 For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in as few steps as possible, and you only have six tries. On each guess, Wordle will tell you if each letter:
@@ -9,377 +11,95 @@ For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the gam
 - Is in the word, but the wrong spot (yellow)
 - Is not in the word at all (grey)
 
-That's all there is to it! It sounds simple, but the game isn't easy because of the sheer number of possibilities. What we are effectively doing is reducing a set of 2,315 possible solution words down to a single word in six tries. We have access to an additional 10,657 words that are accepted as guesses ("support words"), but realistically, we won't be able to remember offhand which words are candidates and which are solutions.
+That's all there is to it! It sounds simple, but the game isn't easy because of the sheer number of possibilities. In Wordle, we pick a single word from a set of 2,315 possible solution words in six tries. We also have access to an additional 10,657 words that are accepted as guesses ("support words"). Realistically, since we won't be able to remember offhand which words are candidates and which are solutions, **we are effectively reducing a set of 12,972 words to a single word in six tries**.
 
 > **Note:** The full sets of words can be retrieved from the website's main script. Use your browser's developer console to access it.
 
-## About This Post
-This post details my approach to design an optimal way to play the game. Unlike my other posts where I typically survey the literature, identify gaps, and state a clear area of contribution, this project was about discovering a solution for myself. Hence, I did not google for a programming solution beforehand. I primarily used simulation in Python to derive the key ideas for a strategy from scratch, and the only other source of ideas was my boss, Jerome, who is a seasoned programmer. A final note is that the ideas in this post were not written in chronological order - my thoughts and experimentation approach was much more non-linear than what will be presented.
+## The Word on Wordle
+Most of the content on Wordle have focused on the "best" words to use, and not so much on the thinking behind the game. The more popular online sources recommend single words ([CNET](https://www.cnet.com/how-to/best-wordle-start-words-strategies-tips-how-to-win/), [Review Geek](https://www.reviewgeek.com/107930/whats-the-best-wordle-starting-word/)) with some theory, but without supporting data. More technical writers ([Rickard](https://matt-rickard.com/wordle-whats-the-best-starting-word/), [Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a), [Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb), [Gafni](https://towardsdatascience.com/automatic-wordle-solving-a305954b746e), [Pastor](https://towardsdatascience.com/hacking-wordle-f759c53319d0)) make recommendations with some technical backing, mostly through simulation.
 
-## Game Strategy
-What I've come to make of the game is that it is played in 6 chronological steps: one for each guess that Wordle provides us. We will run through each step in order, supporting key insights with data from simulations.
+| Source | Recommendations | Supported by Data |
+| :----: | :------- | :---------------: |
+| CNET | First guess only: `audio`, `stare`, `teary`, `maker`, `cheat`, `adieu`, `story` |  No |
+| USA Today | First guess only: `adieu`, `audio`, `stare`, `roast`, `ratio`, `arise`, `tears`, `roate` (copied from Tyler Glaiel) | No |
+| Matt Rickard | First guess only: `soare` | Yes |
+| Tyler Glaiel | First guess only: `roate`, `raise` | Yes |
+| Kyle Pastor | Two words: `arose-until` | Somewhat |
+| Barry Smyth | One word: `tales`; Two words: `cones-trial`; Three words: `hates-round-climb` | Yes |
+| Yotam Gafni | One word: `aesir` | Yes |
 
-### Step 1: Filter Away
-In this step, we have 12,972 **candidates** to choose our first word from. As part of the solution approach, we make no distinctions between solutions (2,315 of them) and support words (10,657 of them), because we assume that a player would not know which category each word belongs to.
+It goes without saying that the recommendations *without* data are not ideal. These have no concrete indication of either (1) how well they worked in the past, and (2) how well they will work in future. Furthermore, there is no clear metric on which these recommendations are based. While the recommendations supported by data are an improvement, there are some issues with taking them as is. In the next section, we discuss why the various technical recommendations may not be as optimal or actionable as they seem.
 
-Hence, it should be obvious that the first step is all about **filtering candidates**. We want to choose the candidate that helps us to reduce the candidate set as much as possible for our next guess. To figure out which word does this the best, we need a way to **rank** candidates. Here are some techniques I tested:
+## Why the "Best" Isn't Best for You
 
-1. **Global Letter Frequencies (GLF):** This is based on how popular each letter is, measured by the occurrence of each letter in a given set of words. For step 1, this would be the full list of 12,972 words. For step 2, it would be the filtered set of candidates available at that time. The score for each word is simply the sum of the occurrences of each of its constituent letters.
-2. **Positional Letter Frequencies (PLF):** This is based on how popular each letter is *in its position in the 5-letter word*. It is also measured by frequency of occurrence in words in a given set of words. Suppose you took all 12,972 words and stacked them on top of each other to get a really tall table with 5 columns. Treat each column as a discrete random variable. Then, each of these variables would have a certainty frequency distribution. Perhaps `s` occurs 1.5k times for the first letter of every word (or first column in the table) - that is what I term the letter frequency of `s` at position 1. The score for each word is simply the sum or average of the positional letter frequency of each of its constituent letters.
+### What is a Strategy?
+First, we need to ask ourselves what a Wordle strategy is. Much of the content focuses on seed words: the initial 1-3 preset guesses. But, a strategy in Wordle is surely more than that. We can analyse this using the six rounds in the game.
 
-To test for the better approach, I computed the GLF and PLF scores for each of the 12,972 words, took the top 100 from each ranking table, and ran each of those words against the 2,315 solution words. As an additional check, I also computed the improvement in the **solution space** (25 letters vs. 5 positions) to check how many position-and-letter possibilities were being eliminated.
+In the first round, we submit a good **(1) initial word** and receive feedback.
 
-While there was a strong positive correlation between the decrease in the size of the candidate set and GLF (63%), there was almost no correlation between that and PLF (-1%). Hence, GLF seemed to be better than PLF for picking a good first word. But, at this stage, we're looking for good **words** to start with. Given that both approaches are wired differently and search a different set of words, we will pick the best 100 words from the combined GLF and PLF ranking table. We can then limit our search space to this set of words, and move on. 75 words were picked from GLF alone, 17 from PLF alone, and 8 were among the top words from GLF and PLF.
+In the second round, we use the feedback to update our list of candidate words (filtering down) and **(2) rank them**. We must then decide on a **(3) priority**: do we attempt to solve or filter candidates down (cue Wheel of Fortune theme)? This leads us to the submission of another **word** to gather feedback. This process is the same for the third, fourth, fifth, and final rounds.
 
-### Step 2: Filter Again
-Nailing the problem on the second guess will earn you a lot of street cred precisely because it is an improbable outcome. However, optimal play places greater emphasis on the more likely outcomes, not so much the improbable ones. My tests are consistent with other posts on solving Wordle: most problems are solved within 4 steps.
+Combining the things in bold above, the components of a Wordle strategy in my view are: (1) a good seed word to set off the solution on a good or at least feasible path, (2) ranking algorithms to order candidates in terms of their ability to solve the problem vs. filter candidates, and (3) decision rules to prioritise between solving and filtering.
 
-You can pre-select a word which is best **on average**, or you can use a ranking heuristic to automatically choose one. Choosing the former means that we would be neglecting the additional information gained from feedback on the first word. Choosing the latter allows us to be more adaptable. We will investigate both approaches.
-
-#### Pre-selected Word
-This approach enables us to be optimal on average, if we play a large number of games. It is easily implementable for a human: just remember the pair of words and use that every time. 
-
-We identify the top *word pairs* starting with the list of 100 words we selected earlier. For each one, we find the next word that fulfils the conditions below:
-
-1. Has a completely different set of letters from the first word
-2. Has the highest possible score on the ranking table (GLF or PLF, tested separately)
-
-Using the GLF ranking table, the top three pairs were `nares, doilt`, `tales, corni`, and `rales, tonic`. The top word from before (`soare`) is no longer near the top. This is because the first step is only one filter. In fact, the second filter matters more! The correlation between (1) the overall decrease in candidate set size from step 0 to step 2 and (2) the decrease in candidate set size from step 1 to step 2 was 76%. The correlation between (1) and (3) the decrease in candidate set size from step 0 to step 1 was 0.5%.
-
-Using the PLF ranking table, the top three pairs were 
-
-#### Adaptive Selection of 2nd Word
-This approach enables us to make use of the information gained from step 1, but requires a good ranking system to pick the next word. It is a risky approach because it is entirely possible that the feedback from step 1 is not informative, and the ranking system does not work well.
-
-> 
-
-We select the two words based on the percentage decrease in the candidate set from step 0 to step 2.
-
-
-Quit Trying to Slay the Dragon with 2 Hits
-In this step, we have fewer than 12,972 candidates to choose our second word from. 
-
-1. Force two vowels or not
-2. Completely different letters or not
-2. GLF or PLF
+With this definition in place, it becomes clearer that the existing literature only covers one part of a strategy: just the seed word. That would be well and good if the recommendations were based on *heuristics*, and not *outcomes*.
 
 
 
-In this post, I'll take you through my stages of thinking about the game and the development of a solution to play the game optimally (using Python):
+First, we have single-word recommendations. Theoretically, it is optimal to use the word (or words) that produces the best average on some metric. This is because we have no information at that point, so we have to rely on broad statistics. Three good choices are the (1) the number of steps to reach a solution, (2) the number of greens and yellows that would be produced, and (3) the size of the candidate set after filtering.
 
-1. Intuition
-2. Global letter frequency
-3. Positional letter frequency
-4. Word popularity
+#### Recommendations Based on Projected Game Outcomes
+The first solution type sounds great, but may not be effective. This was used separately by Glaiel and Smyth in making their recommendations. What isn't so obvious is that **the recommendations are not entirely applicable to human players**. In generating the game outcomes, specific algorithms had to be used to simulate full games. This means that steps 2 to 6 were played. But what step was taken? Will it still be optimal if I go full potato and guess terrible words like `jujus` and `xylyl`? (I apologise if these are your favourite words)
 
- I did, however, glance at some non-technical posts that recommended the "best" words to try out along the way.
+Surely not! The recommended words worked well under the following conditions:
 
-After writing the post, I found several solutions that were able to solve the game all the time. However, these were generally brute force approachecs that checked all 2,315 possible solutions in each iteration. This implicitly means that their systems were aware of what words were in the solution set and which weren't ("support" words).
+1. The recommended word(s) were used at the start.
+2. In each subsequent round, feedback was input into some algorithm to rank the remaining words. This could have been an extensive search (Glaeil) or heuristics like coverage, letter probabilities, and entropy (Smyth).
+3. In the following round, the highest scoring word was used as the guess.
 
-My approach does not incorporate such a feature. I use the 2,315 possible solutions for testing, but not as part of the algorithm.
+Therefore, the recommendations are optimal **conditional on you playing the game a certain way**. Unless you have perfect memory, lightning-fast computing, are able to consider all or most possibilities, or even copy the algorithms used, the words recommended by the solutions based on average game outcomes may not work out for you.
 
-## Research Questions
-Overarching question: How do you solve the problem in fewer iterations?
+#### Recommendations Based on Projected Next Step Outcomes
+The second and third solutions are relatively straightforward and easy to compute, because they only look one step forward. For the second, take a word you want to evaluate, take a given solution, calculate the feedback, filter the candidate set, and count the number of greens and yellows you would get. The third solution is easy as well: use the same steps, but also count the number of candidates left over from an initial set of 12,972. For both, repeat this for all 2,315 solutions words and take the average.
 
-- Does letter frequency matter?
-- Does letter frequency **at each position** matter?
-- Does better filtering of the candidate set improve performance? What enables better slicing of the candidate set? What kind of words?
+The strength of these approaches is that they take all available feedback into consideration (as opposed to a two-word or three-word strategy that ignores feedback), and avoid making assumptions about how the game will be played downstream (as opposed to the end outcome-based recommendations). The good news is that each step is individually optimal. The question is then: does this result in optimality overall? Will we solve problems in fewer steps on average?
 
-Other thoughts:
-- At each step, you can choose between (1) filtering candidates, and (2) attempting to solve. There are also a range of hybrid options where the intent is balanced more toward either (1) or (2), while leaving the option open for (2) or (1).
-- From Boss: trade an uncertain winning shot for a certain reduction in candidate set
-- Earlier in the game, the focus should be on filtering candidates. Towards the end of the game, the focus should gradually shift toward solving. Iteration 3 is the critical point where you'll have to make the choice of focusing on either solving or filtering. From iteration 4 to 6, the focus should then shift toward 100% solving.
-- Solving is also implemented on a scale:
-    - 100% popularity
-    - 100% positional letter frequency (more slicing)
-- Filtering candidates is implemented as the next best word - the same technique for finding the second word
-- The optimal strategy across the steps can therefore be:
-    1. Filter down
-    2. Filter down, at the cost of earning bragging rights from a two-guess solve
-    3. Solve, but ok to filter
-    4. Solve, but quite ok to filter
-    5. Solve, but filter if you absolutely have to
+### Two-word and Three-word Recommendations
+First, we can argue from a conceptual point of view that two-word and three-word recommendations are not ideal because they do not incorporate the feedback from prior steps. In theory, these recommendations are only optimal *ex-ante* (before the fact) - they are the best course of action in step 0, before the first guess is made. In practice, the best second guess depends on the feedback from the first guess. I've observed is that the optimal second guess **always** depends on the feedback from the first guess. <show evidence>.
 
-## Intuition
-I didn't actually spend much time playing or reading about the game. In the few games I played, the basic strategy I came up with was to eliminate all vowels and some popular consonants, inspired by Wheel of Fortune's default letters in the final round, `RSTLNE`. To achieve this, I used `aeons, built` or `raise, mount`. I hypothesised that this *should* have restricted the set of feasible words to something manageable.
-
-With my admittedly limited vocabulary and haphazard guessing tactics, this solution did not work out very well for me. If I had spent more time on the game, I may have developed better strategies. But, most who know me could already have guessed that I would adopt a data-driven approach.
-
-## Interlude: Game Logic
-From here on out, I will be using Python to evaluate ideas to solve Wordle. Hence, I have consolidated some code for game logic in this short subsection.
-
-We have functions to (1) simulate the feedback from Wordle (green/yellow/red), and (2) filter the current candidate set. (1) returns feedback as five-letter strings with `G` for green, `Y` for yellow, and `X` for grey representing each letter for the candidate. For example, the response `XXXGY` to a guess word `codes` indicates that the first three letters are not present in the solution, `e` is a correct letter in the correct position, and `s` is present in the solution, but is in an incorrect position. The response `GGGGG` indicates that the problem has been solved.
-
-```py
-# Simulate feedback from Wordle
-def get_feedback(input_word, solution):
-    output = ''
-    for i in range(5):
-        if input_word[i] == solution[i]:
-            output += 'G'
-        elif input_word[i] in solution:
-            output += 'Y'
-        else:
-            output += 'X'
-    return output
-
-# Filter candidate set
-def filter_wordset(input_word, feedback, wordset):
-    newset = wordset.copy()
-    for i in range(5):
-        if feedback[i] == 'G':
-            newset = newset.loc[newset.word.str[i] == input_word[i]]
-        elif feedback[i] == 'Y':
-            # newset = newset.loc[newset.word.str.contains(input_word[i])]
-            newset = newset.loc[newset.word.str.contains(input_word[i]) & newset.word.apply(lambda x: x[i] != input_word[i])]
-        else:
-            newset = newset.loc[~newset.word.str.contains(input_word[i])]
-    return newset
-```
-
-Next, we need an algorithm for the game. The function below simulates a single Wordle game, and the function below that runs simulations in parallel and logs some metrics. In summary, the algorithm does the following:
-
-1. Get feedback on a guess
-2. Filters the candidate set based on the feedback
-3. Computes the scores for each word in the candidate set
-4. Choose the first word from the scores table
-5. Repeat from (1) until we get `GGGGG` as the feedback string
-
-For performance evaluation, we have three metrics. The number of turns taken to solve the problem is a must-have, but it doesn't provide enough fidelity about how well our chosen words are slicing the set of candidates. Hence, we log the size of the candidate set after the first and second cuts. Good word choices should result in lower average/median values.
+Therefore, the optimal strategy should not involve picking a second and third word before incorporating the feedback from the prior guesses.
 
 
-```py
-def sim_single(input_word, solution, score_fn, wordset=wordle):
-    feedback = ''
-    tested_words = []
-    n_iter = 1
+### TL;DR
+There is no single optimal word or set of words. **How you play the game defines what is optimal**.
 
-    while feedback != 'GGGGG':
+We will use experiments to prove this point.
 
-        # Check solution
-        feedback = get_feedback(input_word, solution)
-        tested_words.append(input_word)
-        
-        # Filter wordset
-        wordset = filter_wordset(input_word, feedback, wordset)
-        wordset = wordset.loc[~wordset.word.isin(tested_words)]
-        if n_iter == 1:
-            first_cut = wordset.shape[0]
-            second_cut = 0
-        elif n_iter == 2:
-            second_cut = wordset.shape[0]
-            
-        # Compute scores
-        scores = score_fn(wordset)
+## What is an "Optimal Strategy"?
+From a theoretical point of view, the optimal strategy across the six steps (or tries) balances between **solving** (guessing a word that we think is the solution) and **filtering** (using words that will reduce the size of the candidate set as much as possible). Here's the general strategy I've derived from playing the game and designing systems to beat it:
 
-        # Set new input word
-        if scores.shape[0] > 0:
-            input_word = scores.word.iloc[0]
-            n_iter += 1
-    return n_iter, first_cut, second_cut
+1. **Filter as many words as possible.** We have no information at this point, so there is room for optimising based on general statistics here. The better the first guess, the smaller the candidate set, and the easier the problem downstream.
+2. **Filter as many words as possible, *conditional on the feedback from step 1***. While we would earn massive street cred from solving the game in two steps, this is highly improbable. An optimal strategy would not prioritise this. Hence, the best we could do in step 2 is filter candidates as much as possible. In addition, we should also use the information from step 1 as much as possible.
+3. **Depends!** If we have obtained enough information (in terms of greens and yellows), perhaps we could go for a solve (like Wheel of Fortune). Otherwise, it may be better to play it safer and choose another word to filter the candidates more.
+4. **Again, it depends.** The considerations are the same as step 3. But, this step is where most problems are solved. Perhaps, we could be more aggressive by gearing more toward solving than filtering.
+5. **AGAIN, it depends.** The considerations are the same as the prior two steps, but the balance should lie more toward solving than filtering. At this point, the candidate set should have been filtered down to a very manageable level. However, there are edge cases where you have a set of words that differ by only one letter (e.g. fiver, fixer, fiber) or two letters (e.g. shake, brake, flake). More filtering is required for this step by choosing words with the letters that differ. For example, for `fiver / fixer / fiber`, we may guess `box` to split the set into `fiver` and `fixer/fiber`.
+6. **Solve.** If it still isn't clear what the solution is, just hazard a guess! What do you have to lose?
 
-def run_sim(input_word, sim, score_fn, single=True, input_word2=None):
-    
-    if single:
-        results = Parallel(n_jobs=5, verbose=3)(delayed(sim)(input_word, s, score_fn) for s in wordle_answers.word)
-    else:
-        assert input_word2 is not None
-        results = Parallel(n_jobs=5, verbose=3)(delayed(sim)(input_word, input_word2, s, score_fn) for s in wordle_answers.word)
-        
-    data = pd.DataFrame(results, columns=['n_iter', 'first_cut', 'second_cut'])
-    
-    # Compute summary for no. of iterations
-    summary_iter = pd.DataFrame(data.n_iter.describe()).T.reset_index(drop=True)
-    summary_iter.columns = 'n_iter_' + summary_iter.columns
-    summary_iter['iter_2_or_less'] = np.mean(data.n_iter <= 2)
-    summary_iter['iter_3'] = np.mean(data.n_iter == 3)
-    summary_iter['iter_4'] = np.mean(data.n_iter == 4)
-    summary_iter['iter_5'] = np.mean(data.n_iter == 5)
-    summary_iter['iter_6'] = np.mean(data.n_iter == 6)
-    summary_iter['fail'] = np.mean(data.n_iter > 6)
-    
-    # Compute summary for first cut
-    summary_c1 = pd.DataFrame(data.first_cut.describe()).T.reset_index(drop=True)
-    summary_c1 = summary_c1.drop('count', axis=1)
-    summary_c1.columns = 'c1_' + summary_c1.columns
-    
-    # Compute summary for second cut
-    summary_c2 = pd.DataFrame(data.second_cut.describe()).T.reset_index(drop=True)
-    summary_c2 = summary_c2.drop('count', axis=1)
-    summary_c2.columns = 'c2_' + summary_c2.columns
-    
-    # Combine summary
-    summary = pd.concat([summary_iter, summary_c1, summary_c2], axis=1)
-    display(summary)
-    if single:
-        summary.insert(0, 'word', input_word)
-        data.insert(0, 'word', input_word)
-    else:
-        summary.insert(0, 'words', f'{input_word}, {input_word2}')
-        summary.insert(1, 'word1', input_word)
-        summary.insert(2, 'word2', input_word2)
-        data.insert(0, 'words', f'{input_word}, {input_word2}')
-        data.insert(1, 'word1', input_word)
-        data.insert(2, 'word2', input_word2)
-        
-    return summary, data
-```
+## The Players
+In this post, I define two solvers for the game: (1) a relatively optimised solver ("the Bot"), and (2) a solver that tries to behave the way a human theoretically would ("the Human").
+
+### The Bot
 
 
-
-## Idea 1: Global Letter Frequency
-
-### Key Idea
-The first solution I thought of involved letter frequency. The idea was simple: trim the set of candidates as fast as possible by scoring each one by the popularity of its constituent letters. Popularity here refers to the frequency of occurrence of the letter in the universal list of 5-letter words. For example, if `a` occurs 10,000 times in all 5-letter words, `b`, 20,000 times, ..., and `e`, 50,000 times, then the fake word `abcde` would have a score of 150,000 (sum of 10,000, 20,000, 30,000, ..., 50,000).
-
-This scoring system would put words with popular letters at the top of the list. I *theorised* that using these words as guesses would trim the candidate set quickly. But of course, with all technical things, theories add no value until they're validated with data, so let's dive into the implementation!
-
-### Implementation
-I used a set of approximately 13k 5-letter words used by Wordle as the corpus. I defined two functions: (1) to take in the corpus saved in a Pandas DataFrame, and adds one column per letter with the counts of that letter in the given word; and (2) to compute scores for each word in the corpus.
-
-```py
-def compute_letter_frequencies(wordset):
-    w = wordset.copy()
-    for letter in list('abcdefghijklmnopqrstuvwxyz'):
-        w[letter] = w.word.str.contains(letter).astype(int)
-    return w.iloc[:, 1:]
-
-def compute_score(x, freqs):
-    letters = set(x)
-    output = 0
-    for letter in letters:
-        output += freqs[letter]
-    return output
-```
-
-Then, I computed the global letter frequencies for all 13k words (`wordle`) and computed the scores for each word:
-
-```py
-global_freqs = compute_letter_distribution(wordle).sum().to_dict()
-global_scores = wordle.word.apply(compute_score, freqs=global_freqs)
-global_scores = pd.DataFrame({'word': wordle.word, 'score': global_scores}).sort_values('score', ascending=False)
-```
-
-![Global letter frequencies]()
-
-![Global scores]()
-
-Finally, I put these functions into the simulation function above. Note that this means we are **recomputing letter frequencies for every updated candidate set**. We do this because the frequency of letters that help to eliminate incorrect solutions changes as the candidate set changes. This contrasts with [Mickey Petersen's solution on Inspired Python](https://www.inspiredpython.com/article/solving-wordle-puzzles-with-basic-python), which re-uses the global letter frequencies in every iteration.
+### The Human
 
 ### Results
-The simulation started with all 13k Wordle words (2,315 answers + 10,657 supporting words) as the candidate set. For the initial guess, I chose the top 10 words by the global letter frequency score, and four words recommended by [Harry Guinness on Wired.com](https://www.wired.com/story/best-wordle-tips/) based on truly global letter frequency: all words in the Concise Oxford Dictionary. For the former, there were multiple words with the same letter combinations - I simply took the first word. Here is the list of 14 words:
+- Optimal words
+- For fun: Head-to-head
 
-```
-1. aeros      8.  aeons
-2. aesir      9.  nears
-3. aloes      10. saine
-4. rales      11. notes
-5. stoae      12. resin
-6. arets      13. tares
-7. aisle      14. senor
-```
+What, then, is the way to go?
 
 
-![Results table]()
 
-Guinness was on to something! Some words were indeed better than others, and his chosen initial words featured in the top 5. In his article, Guinness also recommended using a second word to test other popular letters. Hence, I ran a variant of the simulation, forcing the second one to be one of our choosing. I used the top 5 words based on the average number of turns required for a solution, along with the **next 3 highest-scoring words** for each initial word that met the following criteria:
 
-- Did not have any of the letters in the respective initial word
-- Had two vowels in them
-- Overall: Had no words if identical letter combinations
 
-I also included Guinness' recommendations for his four chosen initial words.
-
-| Initial Word | Second Words |
-| :--------: | :----------- |
-| `tares` | `indol`, `noily`, `nicol`, `chino` |
-| `saine` | `loury`, `yourt`, `clour` |
-| `notes` | `urial`, `drail`, `lairy`, `acrid` |
-| `senor` | `tidal`, `laity`, `ictal`, `ducat` |
-| `resin` | `dotal`, `octal`, `ploat`, `loath` |
-
-![Global LF Double]()
-
-This was not an extensive search for the optimal solutions, but merely to check if improvements could be made from using two words instead of one. And this was indeed what we found. It was also interesting to see that though they were not optimal, Guinness' recommendations were still near the top!
-
-Overall, the three key insights were:
-
-1. **Two words are indeed better than one.** Guinness was right! 
-2. **Letter ordering seems to affect the quality of a candidate.** Although both `tares` and `arets` were among the best initial words to use, they returned different results.
-3. **It may not be worth trying to solve problems in two turns.** The proportion of times a problem was solved with two turns or less was extremely small. Luck is likely to be at play for those situations.
-
-## Idea 2: Positional Letter Frequency
-Based on the insights gained, I built on the solution with what I termed "positional letter frequency" for simplicity. This refers to the letter frequency based on position of the letter in the word.
-
-### Key Idea
-As we saw earlier, guessing popular letters is not enough to win. We need the correct **order** of the letters. Hence, in addition to eliminating words with/without popular letters, we should also eliminate words that have letters in unlikely positions.
-
-And we can certainly exploit the tendency for letters to be in specific positions. In the plot below, `s` appears 1.5 as many times as `c`, the next highest-occurring letter in the first position. `s` also happens to appear the most in the last position. Notice that 4 of the top 5 initial words we chose for testing the two-word strategy had either `s` at the start or at the end!
-
-![Letter Frequency at Position 1]()
-
-![Letter Frequency at Position 5]()
-
-### Implementation
-We amend our algorithm to use **letter frequencies in each position** instead of the global letter frequencies for all of Wordle's 5-letter words. This also applies to the updated candidate sets after we have narrowed them down in the course of a game. In implementing the solution, there was a tendency for words with `s` at the start and end to appear at the top of the list. To control for this, we removed words with duplicate letters when choosing the first word. We then tested several of the top words by positional letter frequency, and added Guinness' 4 words for testing the (1) single world and (2) two-word strategies as we did earlier.
-
-```py
-# Compute positional letter frequencies
-def compute_pos_letter_freq(wordset):
-    pos_scores = {}
-    pos_scores[0] = wordset.word.str[0].value_counts().to_dict()
-    pos_scores[1] = wordset.word.str[1].value_counts().to_dict()
-    pos_scores[2] = wordset.word.str[2].value_counts().to_dict()
-    pos_scores[3] = wordset.word.str[3].value_counts().to_dict()
-    pos_scores[4] = wordset.word.str[4].value_counts().to_dict()
-    
-    return pos_scores
-
-# Compute scores
-pos_lf_scores = wordle.word.apply(compute_pos_score, pos_scores=pos_scores)
-pos_lf_scores = pd.DataFrame({'word': wordle.word, 'score': pos_lf_scores}).sort_values('score', ascending=False)
-
-# Select words with no repeated letters
-pos_lf_scores.loc[pos_lf_scores.word.apply(lambda x: len(x) == len(set(x)))]
-```
-
-The results turned out to be worse than using global letter frequencies. This did not feel intuitive to me - using positional letter frequencies should work better because it should slice the candidate set more cleanly.
-
-![Initial word]()
-
-![Two words]()
-
-To investigate this result, I implemented both algorithms as pseudo-apps and ran them against the first 20 problems in the [Wordle archive](https://www.devangthakkar.com/wordle_archive/).
-
-For global letter frequencies (`resin, ploat`):
-
-- Wordle 2: `imshy` --> `cissy` --> `kissy` --> `sissy` - solution could **not** have been reached earlier due to the scores
-- Wordle 8: `unlaw` --> `fanal` --> `nahal` --> `naval` - solution could have been reached 2 steps earlier
-- Wordle 9: `merks` --> `wersh` --> `sered` --> `serge` - did not make it to the solution, `serve`
-- Wordle 10: `beath` --> `meath` --> `death` --> `heath` - solution could **not** have been reached earlier due to the scores
-- Wordle 12: `odyle` --> `lomed` --> `model` - solution could have been reached 1 step earlier
-- Wordle 13: `carby` --> `garum` --> `marka` --> `karma` - solution could have been reached 1 step earlier
-- Wordle 18: `hated` --> `acute` --> `amate` --> `abate` - solution could have been reached 1 step earlier
-
-For positional letter frequencies (`pares, doilt`):
-
-- Wordle 9: `herse` --> `serge` --> `serre` --> `serve` - solution could have been reached 2 steps earlier
-- Wordle 10: `meath` --> `beath` --> `neath` --> `heath` - solution could have been reached 2 steps earlier
-- Wordle 12: `lobed` --> `jodel` --> `yodel` --> `model` - solution could have been reached 2 steps earlier
-- Wordle 13: `barry` --> `marah` --> `garum` --> `karma` - solution could have been reached 1 step earlier
-
-In general, both algorithms had their fair share of weird word choices. This is fine if it helps to slice the candidate set well. However, in several cases, the suboptimal ordering of words within the candidate set resulted in solutions being attained much later. And this seemed more prevalent for the positional approach. For the global approach, improvements were difficult because words were ranked purely by overall letter popularity, not word popularity/likelihood, which is something that the positional approach implicitly does.
-
-Another observation is that the positional approach produced more natural or common words (not shown in examples here), whereas the global approach used several obscure, weird words. The advantage from using common words is that Wordle is probably more likely to choose words that people know, therefore increasing the probability of hitting the right word with the positional approach.
-
-The key insight from this section is that the popularity of **words** matters, not just the letters. We (humans) don't need to worry about this because salience effects are natural for us. However, our solver needs to be specifically imbued with this knowledge. We will investigate word popularity in the next section.
-
-## Idea 3: Word Popularity
-I used data from [Lexipedia](https://en.lexipedia.org/) as a rough gauge of word popularity. This dataset contains the frequency of each word's occurrence in Wikipedia articles, and the count of articles that each word appears in. I merged the data into the DataFrames for the corpus and the scores (global and positional) so that we can use it to order the candidate set with the more natural/intuitive words upfront. Then, I re-ran the simulations above for one and two words on the global and positional letter frequency approaches.
-
-![Global Single]()
-
-![Global Double]()
-
-![Positional Single]()
-![Positional Double]()
+I wouldn't say that these are the "best" or "most optimal" words for a human player because (1) I cannot fully simulate a human player's actions, which in turn affect there are many definitions of what is optimal. 
