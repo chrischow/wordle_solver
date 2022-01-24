@@ -1,4 +1,4 @@
-# A Data-Driven Approach to Optimal Play in Wordle
+# Lost for Words: Why There Are Possibly No Best Words for Wordle
 
 Over the past two weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - more on discovering a good strategy than on playing the game. And that started me on a journey to build a system to simulate games and derive insights on optimal play.
 
@@ -43,6 +43,17 @@ Combining the things in bold above, the components of a Wordle strategy in my vi
 
 With this definition in place, it becomes clearer that the existing literature only covers one part of a strategy: just the seed word. That would be well and good if the recommendations were based on *heuristics*, and not *outcomes*.
 
+### Heuristic-based vs. Outcome-based Recommendations
+A *heuristic-based* approach requires us to make some value judgement about ranking or priorities. It is a set of rules that we set beforehand, and apply in the appropriate scenario. For example, a heuristic for the seed word could be "use the word with the highest sum of letter frequencies" or "use the word with the lowest average number of candidates after filtering". A ranking heuristic could once again be the "sum of letter frequencies".
+
+Projecting outcomes to derive the optimal seed words is a good thought. The question is, what outcomes are being projected? If we're referring to 
+
+Computing **next-step outcomes** 
+
+## Conclusion
+- Best seed words are only for a specific and consistent style of play over the long term
+- What helps people is a strategy, and a way of thinking about the problem
+- There are better words if you use heuristics
 
 
 First, we have single-word recommendations. Theoretically, it is optimal to use the word (or words) that produces the best average on some metric. This is because we have no information at that point, so we have to rely on broad statistics. Three good choices are the (1) the number of steps to reach a solution, (2) the number of greens and yellows that would be produced, and (3) the size of the candidate set after filtering.
