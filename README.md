@@ -1,8 +1,21 @@
-# Lost for Words: Why There Are Possibly No Best Words for Wordle
+# Wordle2Vec: A Vectorised Approach to Solving Wordle
+Over the past weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only since last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been building a system to play the game optimally. This post documents my thoughts on Wordle, and my approach to building a solver.
 
-Over the past two weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - more on discovering a good strategy than on playing the game. And that started me on a journey to build a system to simulate games and derive insights on optimal play.
+## The Word on Wordle
+Although numerous articles have been written on Wordle, there is still a gap in the literature. Most articles have 
+Building on [Christopher Groux's summary article](https://www.inverse.com/gaming/wordle-starting-words-best-using-math), here is a summary of several articles with their approaches and recommendations:
 
-Wordle and Wordle alone occupied my mind over the past weekend. However, as I progressed in building my solution, I started to see that I was operating with the faulty assumption that the optimal word guesses for a machine are also optimal for a human. Hence, I revised my approach from building a machine that was *neither realistic enough for a human nor optimised enough as a machine* to building two solutions: (a) a pretty optimised solver and (b) a human-like system. And these are the contributions of this post: (1) an explanation of why the "best" combinations of words for Wordle have limited utility, (2) a different approach for a solver implemented in Python (not necessarily the best or most optimised), and (3) a system designed to act in a more human fashion.
+| Source | Approach | Recommendations |
+| :----- | :------- | :-------------- |
+| [Tyler Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) | Expected green/yellow/grey scores | Start with `soare`, `roate`, or `raise` |
+| [Tom Neill](https://notfunatparties.substack.com/p/wordle-solver) | Expected remaining candidates | Start with `raise` |
+| [John Stechschulte](https://towardsdatascience.com/optimal-wordle-d8c2f2805704) | Information entropy | Top 10 starting words: `tares`, `lares`, `rales`, `rates`, `nares`, `tales`, `tores`, `reais`, `dares`, `arles`, `lores`. Words that get the most coloured tiles and words with the most vowels are not necessarily the best. |
+| [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | One word: `tales`; Two words: `cones-trial`; Three words: `hates-round-climb` |
+| [Ben Bellerose](https://towardsdatascience.com/wordle-solver-using-python-3-3c3bccd3b4fb) | Letter position probability | Nil |
+| [Sejal Dua](https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723) | 
+
+In his first article, he summarises the **best words** to start with from various technical approaches ([Groux, 2022]), and derives three key ideas for solving Wordle: (1) use lots of vowels, (2) don't be afraid to use guesses that look different, and (3) use normal language. In his second article, he writes about Wordle **strategy** ([Groux, 2022](https://www.inverse.com/gaming/wordle-strategy-to-solve-every-answer)) at each step. 
+
 
 ## The Game
 For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in as few steps as possible, and you only have six tries. On each guess, Wordle will tell you if each letter:
@@ -16,7 +29,7 @@ That's all there is to it! It sounds simple, but the game isn't easy because of 
 > **Note:** The full sets of words can be retrieved from the website's main script. Use your browser's developer console to access it.
 
 ## The Word on Wordle
-Most of the content on Wordle have focused on the "best" words to use, and not so much on the thinking behind the game. The more popular online sources recommend single words ([CNET](https://www.cnet.com/how-to/best-wordle-start-words-strategies-tips-how-to-win/), [Review Geek](https://www.reviewgeek.com/107930/whats-the-best-wordle-starting-word/)) with some theory, but without supporting data. More technical writers ([Rickard](https://matt-rickard.com/wordle-whats-the-best-starting-word/), [Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a), [Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb), [Gafni](https://towardsdatascience.com/automatic-wordle-solving-a305954b746e), [Pastor](https://towardsdatascience.com/hacking-wordle-f759c53319d0)) make recommendations with some technical backing, mostly through simulation.
+Most of the content on Wordle have focused on the "best" words to use, and not so much on the thinking behind the game. The more popular online sources recommend single words ([CNET](https://www.cnet.com/how-to/best-wordle-start-words-strategies-tips-how-to-win/), [Gamespot](https://www.gamespot.com/articles/wordle-best-starting-words-to-use-and-other-game-tips/1100-6499460/)) with some theory, but without supporting data. More technical writers ([Rickard](https://matt-rickard.com/wordle-whats-the-best-starting-word/), [Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a), [Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb), [Gafni](https://towardsdatascience.com/automatic-wordle-solving-a305954b746e), [Pastor](https://towardsdatascience.com/hacking-wordle-f759c53319d0)) make recommendations with some technical backing, mostly through simulation.
 
 | Source | Recommendations | Supported by Data |
 | :----: | :------- | :---------------: |
@@ -25,12 +38,16 @@ Most of the content on Wordle have focused on the "best" words to use, and not s
 | Matt Rickard | First guess only: `soare` | Yes |
 | Tyler Glaiel | First guess only: `roate`, `raise` | Yes |
 | Kyle Pastor | Two words: `arose-until` | Somewhat |
-| Barry Smyth | One word: `tales`; Two words: `cones-trial`; Three words: `hates-round-climb` | Yes |
+| Barry Smyth |  | Yes |
 | Yotam Gafni | One word: `aesir` | Yes |
 
 It goes without saying that the recommendations *without* data are not ideal. These have no concrete indication of either (1) how well they worked in the past, and (2) how well they will work in future. Furthermore, there is no clear metric on which these recommendations are based. While the recommendations supported by data are an improvement, there are some issues with taking them as is. In the next section, we discuss why the various technical recommendations may not be as optimal or actionable as they seem.
 
 ## Why the "Best" Isn't Best for You
+
+## What Kind of Problem is Wordle?
+NP-complete
+Ways of solving it 
 
 ### What is a Strategy?
 First, we need to ask ourselves what a Wordle strategy is. Much of the content focuses on seed words: the initial 1-3 preset guesses. But, a strategy in Wordle is surely more than that. We can analyse this using the six rounds in the game.
