@@ -1,20 +1,19 @@
 # Wordle2Vec: A Vectorised Approach to Solving Wordle
-Over the past weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only since last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been building a system to play the game optimally. This post documents my thoughts on Wordle, and my approach to building a solver.
+Over the past few weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only since last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been building a system to play the game optimally. This post documents my thoughts on Wordle, and part of my approach to building a solver.
 
 ## The Word on Wordle
-Although numerous articles have been written on Wordle, there is still a gap in the literature. Most articles have 
-Building on [Christopher Groux's summary article](https://www.inverse.com/gaming/wordle-starting-words-best-using-math), here is a summary of several articles with their approaches and recommendations:
+Numerous articles have already been written on Wordle, covering *breadth* for possible seed words and ranking algorithms for candidate words (see table below). Most of them focus on deciding on the optimal seed word by running simulations. Of these, only one or two elaborate on the overall strategy for the game, and how that strategy is implemented in technical terms. My series of posts contribute through *depth*: we investigate what happens under the hood of a Wordle bot at each step in a typical Wordle game.
+
+> Consider comparing against others' results.
 
 | Source | Approach | Recommendations |
 | :----- | :------- | :-------------- |
-| [Tyler Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) | Expected green/yellow/grey scores | Start with `soare`, `roate`, or `raise` |
-| [Tom Neill](https://notfunatparties.substack.com/p/wordle-solver) | Expected remaining candidates | Start with `raise` |
-| [John Stechschulte](https://towardsdatascience.com/optimal-wordle-d8c2f2805704) | Information entropy | Top 10 starting words: `tares`, `lares`, `rales`, `rates`, `nares`, `tales`, `tores`, `reais`, `dares`, `arles`, `lores`. Words that get the most coloured tiles and words with the most vowels are not necessarily the best. |
+| [Tyler Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) | Expected green / yellow / grey scores; expected remaining candidates | Seed words: `soare`, `roate`, or `raise` |
+| [Sejal Dua](https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723) | Expected green / yellow / grey scores | Seed words: `soare`, `stare`, `roate`, `raile`, or `arose` |
+| [Tom Neill](https://notfunatparties.substack.com/p/wordle-solver) | Expected remaining candidates | Seed word: `raise` |
+| [John Stechschulte](https://towardsdatascience.com/optimal-wordle-d8c2f2805704) | Information entropy for expected green / yellow scores | Top 10 seed words: `tares`, `lares`, `rales`, `rates`, `nares`, `tales`, `tores`, `reais`, `dares`, `arles`, or `lores`. Words that get the most coloured tiles and words with the most vowels are not necessarily the best. |
 | [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | One word: `tales`; Two words: `cones-trial`; Three words: `hates-round-climb` |
 | [Ben Bellerose](https://towardsdatascience.com/wordle-solver-using-python-3-3c3bccd3b4fb) | Letter position probability | Nil |
-| [Sejal Dua](https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723) | 
-
-In his first article, he summarises the **best words** to start with from various technical approaches ([Groux, 2022]), and derives three key ideas for solving Wordle: (1) use lots of vowels, (2) don't be afraid to use guesses that look different, and (3) use normal language. In his second article, he writes about Wordle **strategy** ([Groux, 2022](https://www.inverse.com/gaming/wordle-strategy-to-solve-every-answer)) at each step. 
 
 
 ## The Game
@@ -24,110 +23,56 @@ For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the gam
 - Is in the word, but the wrong spot (yellow)
 - Is not in the word at all (grey)
 
-That's all there is to it! It sounds simple, but the game isn't easy because of the sheer number of possibilities. In Wordle, we pick a single word from a set of 2,315 possible solution words in six tries. We also have access to an additional 10,657 words that are accepted as guesses ("support words"). Realistically, since we won't be able to remember offhand which words are candidates and which are solutions, **we are effectively reducing a set of 12,972 words to a single word in six tries**.
+That's all there is to it! It sounds simple, but the game isn't easy for both humans and machines because of the sheer number of possibilities. In Wordle, there are 2,315 possible solution words, and an additional 10,657 words that are accepted as guesses ("support words"). Assuming that we won't be able to remember offhand which words are support words and which are solutions, **we are effectively reducing a set of 12,972 candidates to a single word in six tries**.
 
 > **Note:** The full sets of words can be retrieved from the website's main script. Use your browser's developer console to access it.
 
-## The Word on Wordle
-Most of the content on Wordle have focused on the "best" words to use, and not so much on the thinking behind the game. The more popular online sources recommend single words ([CNET](https://www.cnet.com/how-to/best-wordle-start-words-strategies-tips-how-to-win/), [Gamespot](https://www.gamespot.com/articles/wordle-best-starting-words-to-use-and-other-game-tips/1100-6499460/)) with some theory, but without supporting data. More technical writers ([Rickard](https://matt-rickard.com/wordle-whats-the-best-starting-word/), [Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a), [Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb), [Gafni](https://towardsdatascience.com/automatic-wordle-solving-a305954b746e), [Pastor](https://towardsdatascience.com/hacking-wordle-f759c53319d0)) make recommendations with some technical backing, mostly through simulation.
+## Wordle Strategy
+Much like Wheel of Fortune, in Wordle, we balance between **solving** (guessing a word that we think is the solution) and **collecting information** (using words to tease out what letters might be in the solution). A human would probably play with the following strategy:
 
-| Source | Recommendations | Supported by Data |
-| :----: | :------- | :---------------: |
-| CNET | First guess only: `audio`, `stare`, `teary`, `maker`, `cheat`, `adieu`, `story` |  No |
-| USA Today | First guess only: `adieu`, `audio`, `stare`, `roast`, `ratio`, `arise`, `tears`, `roate` (copied from Tyler Glaiel) | No |
-| Matt Rickard | First guess only: `soare` | Yes |
-| Tyler Glaiel | First guess only: `roate`, `raise` | Yes |
-| Kyle Pastor | Two words: `arose-until` | Somewhat |
-| Barry Smyth |  | Yes |
-| Yotam Gafni | One word: `aesir` | Yes |
+1. **Round 1: Collect as much information as possible.** We have no information at this point, so we choose a statistically optimal seed word. The better the first guess, the more information we will collect in terms of green, yellow, and grey tiles.
+2. **Round 2: Collect as much information as possible *using the feedback from step 1***. While we would earn massive street cred from solving the game in two steps, this is very difficult. Hence, the best we could do in step 2 is collect more information by using a word with completely different letters from the seed word.
+3. **Round 3: Depends!** If we have obtained enough information (in terms of greens and yellows), perhaps we could go for a solve (like Wheel of Fortune). Otherwise, it may be better to play it safer and choose another word to get more clues.
+4. **Round 4: Again, it depends.** We do the same as we did in step 3. But, this step is where most problems are solved. We could be more aggressive by prioritising a solve over information collection.
+5. **Round 5: AGAIN, it depends.** We do the same as we did in steps 3 and 4. But, the balance should lie even more toward solving than collecting information.
+6. **Round 6: 100% Solve.** It's entirely possible that you're still left with several feasible solutions by round 6. If it still isn't clear what the solution is, just hazard a guess! What do you have to lose?
 
-It goes without saying that the recommendations *without* data are not ideal. These have no concrete indication of either (1) how well they worked in the past, and (2) how well they will work in future. Furthermore, there is no clear metric on which these recommendations are based. While the recommendations supported by data are an improvement, there are some issues with taking them as is. In the next section, we discuss why the various technical recommendations may not be as optimal or actionable as they seem.
+As you can probably see, a strategy is more than just the seed word. It also includes (1) decision rules to prioritise solving vs. collecting information, and (2) a ranking algorithm to choose words.
 
-## Why the "Best" Isn't Best for You
+## A Wordle Solver
 
-## What Kind of Problem is Wordle?
-NP-complete
-Ways of solving it 
+### Overview
+The bot's aim is simple: filter the list of 2,315 possible solutions down to just 1 word in as few tries as possible. Since it does not use a brute force approach to enumerate all possible pathways to the solution, it moves step by step. In each step (round), it ranks words and selects the best one, and then repeats this until it gets the answer.
 
-### What is a Strategy?
-First, we need to ask ourselves what a Wordle strategy is. Much of the content focuses on seed words: the initial 1-3 preset guesses. But, a strategy in Wordle is surely more than that. We can analyse this using the six rounds in the game.
+The key component of the bot is its ranking algorithm. It has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey scores, and (3) a composite of max number of remaining candidates and what I term the *bucket entropy*.
 
-In the first round, we submit a good **(1) initial word** and receive feedback.
+In each step, the bot uses one of the algorithms above to calculate scores for all *relevant* candidates against all feasible solutions. Then, it simply picks the highest-scoring word as the next guess.
 
-In the second round, we use the feedback to update our list of candidate words (filtering down) and **(2) rank them**. We must then decide on a **(3) priority**: do we attempt to solve or filter candidates down (cue Wheel of Fortune theme)? This leads us to the submission of another **word** to gather feedback. This process is the same for the third, fourth, fifth, and final rounds.
+Because the ranking algorithm is computationally expensive, we minimise the amount of computations we have to do by iteratively selecting *feasible* solutions and *relevant* candidates. Feasible solutions are those that match the feedback (green/yellow/grey) obtained in prior steps. Relevant candidates are those that still have some ability to filter solutions. Suppose you have 10 feasible solutions remaining, and **none** of them have the letters `a`, `e`, `r`, `s`, and `t` in positions 1 to 5. Then, it makes no sense to continue evaluating candidate words that are made up of only these letters e.g. `aster`, `tease`, or `tress`. This is because they are of no help in filtering the *remaining* feasible solutions. Therefore, we can safely eliminate these words from the candidate set. The leftover candidates are the relevant ones.
 
-Combining the things in bold above, the components of a Wordle strategy in my view are: (1) a good seed word to set off the solution on a good or at least feasible path, (2) ranking algorithms to order candidates in terms of their ability to solve the problem vs. filter candidates, and (3) decision rules to prioritise between solving and filtering.
+### Implementation
+Implemented a `Wordle` class with the following methods:
 
-With this definition in place, it becomes clearer that the existing literature only covers one part of a strategy: just the seed word. That would be well and good if the recommendations were based on *heuristics*, and not *outcomes*.
-
-### Heuristic-based vs. Outcome-based Recommendations
-A *heuristic-based* approach requires us to make some value judgement about ranking or priorities. It is a set of rules that we set beforehand, and apply in the appropriate scenario. For example, a heuristic for the seed word could be "use the word with the highest sum of letter frequencies" or "use the word with the lowest average number of candidates after filtering". A ranking heuristic could once again be the "sum of letter frequencies".
-
-Projecting outcomes to derive the optimal seed words is a good thought. The question is, what outcomes are being projected? If we're referring to 
-
-Computing **next-step outcomes** 
-
-## Conclusion
-- Best seed words are only for a specific and consistent style of play over the long term
-- What helps people is a strategy, and a way of thinking about the problem
-- There are better words if you use heuristics
-
-
-First, we have single-word recommendations. Theoretically, it is optimal to use the word (or words) that produces the best average on some metric. This is because we have no information at that point, so we have to rely on broad statistics. Three good choices are the (1) the number of steps to reach a solution, (2) the number of greens and yellows that would be produced, and (3) the size of the candidate set after filtering.
-
-#### Recommendations Based on Projected Game Outcomes
-The first solution type sounds great, but may not be effective. This was used separately by Glaiel and Smyth in making their recommendations. What isn't so obvious is that **the recommendations are not entirely applicable to human players**. In generating the game outcomes, specific algorithms had to be used to simulate full games. This means that steps 2 to 6 were played. But what step was taken? Will it still be optimal if I go full potato and guess terrible words like `jujus` and `xylyl`? (I apologise if these are your favourite words)
-
-Surely not! The recommended words worked well under the following conditions:
-
-1. The recommended word(s) were used at the start.
-2. In each subsequent round, feedback was input into some algorithm to rank the remaining words. This could have been an extensive search (Glaeil) or heuristics like coverage, letter probabilities, and entropy (Smyth).
-3. In the following round, the highest scoring word was used as the guess.
-
-Therefore, the recommendations are optimal **conditional on you playing the game a certain way**. Unless you have perfect memory, lightning-fast computing, are able to consider all or most possibilities, or even copy the algorithms used, the words recommended by the solutions based on average game outcomes may not work out for you.
-
-#### Recommendations Based on Projected Next Step Outcomes
-The second and third solutions are relatively straightforward and easy to compute, because they only look one step forward. For the second, take a word you want to evaluate, take a given solution, calculate the feedback, filter the candidate set, and count the number of greens and yellows you would get. The third solution is easy as well: use the same steps, but also count the number of candidates left over from an initial set of 12,972. For both, repeat this for all 2,315 solutions words and take the average.
-
-The strength of these approaches is that they take all available feedback into consideration (as opposed to a two-word or three-word strategy that ignores feedback), and avoid making assumptions about how the game will be played downstream (as opposed to the end outcome-based recommendations). The good news is that each step is individually optimal. The question is then: does this result in optimality overall? Will we solve problems in fewer steps on average?
-
-### Two-word and Three-word Recommendations
-First, we can argue from a conceptual point of view that two-word and three-word recommendations are not ideal because they do not incorporate the feedback from prior steps. In theory, these recommendations are only optimal *ex-ante* (before the fact) - they are the best course of action in step 0, before the first guess is made. In practice, the best second guess depends on the feedback from the first guess. I've observed is that the optimal second guess **always** depends on the feedback from the first guess. <show evidence>.
-
-Therefore, the optimal strategy should not involve picking a second and third word before incorporating the feedback from the prior guesses.
-
-
-### TL;DR
-There is no single optimal word or set of words. **How you play the game defines what is optimal**.
-
-We will use experiments to prove this point.
-
-## What is an "Optimal Strategy"?
-From a theoretical point of view, the optimal strategy across the six steps (or tries) balances between **solving** (guessing a word that we think is the solution) and **filtering** (using words that will reduce the size of the candidate set as much as possible). Here's the general strategy I've derived from playing the game and designing systems to beat it:
-
-1. **Filter as many words as possible.** We have no information at this point, so there is room for optimising based on general statistics here. The better the first guess, the smaller the candidate set, and the easier the problem downstream.
-2. **Filter as many words as possible, *conditional on the feedback from step 1***. While we would earn massive street cred from solving the game in two steps, this is highly improbable. An optimal strategy would not prioritise this. Hence, the best we could do in step 2 is filter candidates as much as possible. In addition, we should also use the information from step 1 as much as possible.
-3. **Depends!** If we have obtained enough information (in terms of greens and yellows), perhaps we could go for a solve (like Wheel of Fortune). Otherwise, it may be better to play it safer and choose another word to filter the candidates more.
-4. **Again, it depends.** The considerations are the same as step 3. But, this step is where most problems are solved. Perhaps, we could be more aggressive by gearing more toward solving than filtering.
-5. **AGAIN, it depends.** The considerations are the same as the prior two steps, but the balance should lie more toward solving than filtering. At this point, the candidate set should have been filtered down to a very manageable level. However, there are edge cases where you have a set of words that differ by only one letter (e.g. fiver, fixer, fiber) or two letters (e.g. shake, brake, flake). More filtering is required for this step by choosing words with the letters that differ. For example, for `fiver / fixer / fiber`, we may guess `box` to split the set into `fiver` and `fixer/fiber`.
-6. **Solve.** If it still isn't clear what the solution is, just hazard a guess! What do you have to lose?
-
-## The Players
-In this post, I define two solvers for the game: (1) a relatively optimised solver ("the Bot"), and (2) a solver that tries to behave the way a human theoretically would ("the Human").
-
-### The Bot
-
-
-### The Human
-
-### Results
-- Optimal words
-- For fun: Head-to-head
-
-What, then, is the way to go?
-
-
-
-
-
-I wouldn't say that these are the "best" or "most optimal" words for a human player because (1) I cannot fully simulate a human player's actions, which in turn affect there are many definitions of what is optimal. 
+- Standard `__init__(self, candidates, solutions, solution=None, verbose=True)`: To initialise the class with several internal variables. These include:
+    - `guess`: The guesses made so far
+    - `feedback`: The feedback collected so far
+    - `ncands`: The number of remaining candidates after each step
+    - `candidates`: The dataframe of relevant candidates
+    - `solutions`: The dataframe of feasible solutions
+    - `optimisations`: Cache of results from running the ranking algorithms on the existing candidates and solutions
+    - `last_optimised`: Record of when each ranking algorithm's cache was stored
+    - `step`: Current round in the game
+    - `solved`: Game completion status
+    - `verbose`: Whether to print out results - turn this off for large scale simulations
+    - `solution`: Used only if a solution is provided
+- `guess(guess, feedback=None)`: Makes a guess and updates the game state
+    - Filters solutions and candidates, but **does not rank them**
+    - Logs guesses, feedback, and number of candidates remaining after the step
+    - Automatically solves the game if there is only one solution remaining
+    - If the object is used as a simulation, no feedback is required
+- `status()`: To print out the history of guesses, feedback, and number of candidates remaining after each step thus far
+- `optimise(method='ncands')`: Runs ranking algorithms on candidate set with respect to the solution set
+    - `ncands`: Composite ranking of the max number of candidates remaining and *bucket entropy*
+    - `lf`: Sum of letter frequencies of each word
+    - `expected_gyx`: Expected green, yellow, and grey scores
+- `records()`: Prints out the history of steps, guesses, feedback, and numbre of candidates remaining after each step
