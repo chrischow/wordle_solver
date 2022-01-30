@@ -141,16 +141,17 @@ from wordlebot.gyx import get_gyx_scores_all, compute_ncands_all, summarise_ncan
 from wordlebot.lf import compute_letter_frequencies, compute_lf_score
 
 class Wordle():
-    def __init__(self, solution=None):
+    def __init__(self, candidates, solutions, solution=None, verbose=True):
         self.guesses = []
         self.feedback = []
         self.ncands = []
-        self.candidates = wordle
-        self.solutions = wordle_answers
+        self.candidates = candidates
+        self.solutions = solutions
         self.optimisations = {}
         self.last_optimised = {'ncands': -1, 'lf': -1, 'expected_gyx': -1}
         self.step = 0
         self.solved = False
+        self.verbose = verbose
         
         if solution:
             self.solution = solution
@@ -161,12 +162,13 @@ class Wordle():
         self.guesses = []
         self.feedback = []
         self.ncands = []
-        self.candidates = wordle
-        self.solutions = wordle_answers
+        self.candidates = candidates
+        self.solutions = solutions
         self.optimisations = {}
         self.last_optimised = {'ncands': -1, 'lf': -1, 'expected_gyx': -1}
         self.step = 0
         self.solved = False
+        self.verbose = verbose
         
         if solution:
             self.solution = solution
@@ -175,7 +177,8 @@ class Wordle():
             
     def guess(self, guess, feedback=None):
         if self.solved:
-            print('Game already solved.')
+            if self.verbose:
+                print('Game already solved.')
             return
         
         if self.solution:
@@ -187,20 +190,27 @@ class Wordle():
             if any([not letter in ['x', 'y', 'g'] for letter in feedback]):
                 raise ValueError('Please input G, Y, or X only.')
         
-        # Update solutions
-        self.solutions = filter_wordset(guess, feedback.upper(), self.solutions)
-        
-        # Update candidates
-        self.candidates = filter_candidates(self.candidates, self.solutions)
-        
+        if feedback != 'GGGGG':
+            # Update solutions
+            self.solutions = filter_wordset(guess, feedback.upper(), self.solutions)
+            
+            # Update candidates
+            self.candidates = filter_candidates(self.candidates, self.solutions)
+
+        if self.verbose:
+            print(f'{guess.upper()} --> {feedback.upper()}: {self.solutions.shape[0]} solutions remaining.')
+
         # Save data
         self.guesses.append(guess.lower())
         self.feedback.append(feedback.upper())
         self.ncands.append(self.solutions.shape[0])
         self.step += 1
         
-        print(f'{guess.upper()} --> {feedback.upper()}: {self.solutions.shape[0]} solutions remaining.')
-        
+        if feedback == 'GGGGG':
+            self.solved = True
+            if self.verbose:
+                self.status()
+
         # Autosolve
         if self.solutions.shape[0] == 1 and feedback != 'GGGGG':
             self.solved = True
@@ -211,31 +221,34 @@ class Wordle():
                 self.feedback.append('GGGGG')
             if len(self.ncands) < self.step:
                 self.ncands.append(1)
-            print(f'Game autosolved. Last guess: {self.solutions.word.tolist()[0].upper()}')
-            self.status()
+            if self.verbose:
+                print(f'Game autosolved. Last guess: {self.solutions.word.tolist()[0].upper()}')
+                self.status()
         
     def status(self):
-        output = pd.DataFrame({
-            'word': self.guesses,
-            'feedback': self.feedback,
-            'n_candidates': self.ncands
-        })
-        if not self.solved:
-            print(f'{self.solutions.shape[0]} solutions remaining.')
-            print(f'{self.candidates.shape[0]} candidates remaining.\n')
-        else:
-            print(f'Game solved in {self.step} steps.')
-        if output.shape[0] > 0:
-            display(output)
-        else:
-            print('No data to display.')
+        if self.verbose:
+            output = pd.DataFrame({
+                'word': self.guesses,
+                'feedback': self.feedback,
+                'n_candidates': self.ncands
+            })
+            if not self.solved:
+                print(f'{self.solutions.shape[0]} solutions remaining.')
+                print(f'{self.candidates.shape[0]} candidates remaining.\n')
+            else:
+                print(f'Game solved in {self.step} steps.')
+            if output.shape[0] > 0:
+                display(output)
+            else:
+                print('No data to display.')
         
     def optimise(self, method='ncands'):
         if not method in ['ncands', 'lf', 'expected_gyx']:
             raise ValueError('Please choose `ncands`, `lf`, or `expected_gyx`.')
         
         if self.solved:
-            print('Game already solved.')
+            if self.verbose:
+                print('Game already solved.')
             return
         
         if self.last_optimised[method] == self.step:
@@ -247,19 +260,15 @@ class Wordle():
             candidates = self.candidates
         
         if method == 'ncands':
-            # Compute scores
-            # df_scores = compute_ncands_all(candidates, self.solutions, self.solutions)
-            # df = summarise_ncands(df_scores)
-            
             # Initialise solutions numpy array
             solutions_vector = encode_set(self.solutions)
             
-            df_scores = compute_ncands_all(candidates, self.solutions, solutions_vector)
+            df_scores = compute_ncands_all(candidates, self.solutions, solutions_vector, verbose=self.verbose)
             df = summarise_ncands(df_scores)
 
         elif method == 'expected_gyx':
             # Compute scores
-            df = get_gyx_scores_all(candidates, self.solutions)
+            df = get_gyx_scores_all(candidates, self.solutions, verbose=self.verbose)
             
         elif method == 'lf':
             # Compute scores

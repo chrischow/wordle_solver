@@ -50,14 +50,14 @@ Returns a dataframe with:
     '''
 
     if parallel:
-        raw_scores = Parallel(n_jobs=5, verbose=1)(
+        raw_scores = Parallel(n_jobs=5, verbose=int(verbose))(
             delayed(get_gyx_scores_single)(input_word, solution_set) \
-                for input_word in tqdm(candidate_set.word)
+                for input_word in tqdm(candidate_set.word, disable=not verbose)
         )
 
     else:
         raw_scores = []
-        for input_word in tqdm(candidate_set.word):
+        for input_word in tqdm(candidate_set.word, disable=not verbose):
             raw_scores.append(get_gyx_scores_single(input_word, solution_set))
     
     # Prepare dataframe
@@ -72,28 +72,6 @@ Returns a dataframe with:
 # *-------------------*
 # | NO. OF CANDIDATES |
 # *-------------------*
-# def compute_ncands_single(input_word, solution, wordset):
-#     '''
-# Obtains the Wordle feedback from guessing a candidate `input_word` against
-# an answer `solution`, and uses that feedback to filter a given wordset `wordset`.
-# This checks how many feasible words would have remained in the set after filtering.
-
-# Returns a tuple with the candidate, the answer, the feedback, and the number
-# of words in the wordset after filtering.
-#     '''
-
-#     fb = get_feedback(input_word, solution)
-#     newset = wordset.copy()
-#     for i, (letter, gyx) in enumerate(zip(input_word, fb)):
-#         if gyx == 'G':
-#             newset = newset.loc[newset[f'p{i}'] == letter]
-#         elif gyx == 'Y':
-#             newset = newset.loc[newset[f'letter_{letter}'].gt(0) & newset[f'p{i}'].ne(letter)]
-#         else:
-#             newset = newset.loc[newset[f'letter_{letter}'].eq(0)]
-    
-#     return input_word, solution, fb, newset.shape[0]
-
 def compute_ncands_single(input_word, solution, wordset_vec):
     '''
 Obtains the Wordle feedback from guessing a candidate `input_word` against
@@ -117,39 +95,8 @@ of words in the wordset after filtering.
     
     return input_word, solution, fb, newset.shape[0]
 
-# def compute_ncands_all(candidate_set, solution_set, wordset, parallel=True):
-#     '''
-# Tests each candidate in the `candidate_set` against each solution in the
-# `solution_set` to check how many words would remain after filtering the
-# `wordset` using each feedback.
 
-# Returns a dataframe with:
-
-# 1. Candidate word
-# 2. Solution word
-# 3. Feedback
-# 4. No. of words remaining after filtering (`ncands`)
-#     '''
-#     if parallel:
-#         all_ncands = Parallel(n_jobs=5, verbose=1)(
-#             delayed(compute_ncands_single)(input_word, solution, wordset) \
-#                 for input_word in tqdm(candidate_set.word) \
-#                 for solution in solution_set.word)
-#     else:
-#         all_ncands = []
-#         for input_word in tqdm(candidate_set.word):
-#             for solution in solution_set.word:
-#                 all_ncands.append(
-#                     compute_ncands_single(input_word, solution, wordset)
-#                 )
-
-#     output = pd.DataFrame(all_ncands, columns=['word', 'solution',
-#                                                'fb', 'ncands'])
-
-#     return output
-
-
-def compute_ncands_all(candidate_set, solution_set, wordset_vec, parallel=True):
+def compute_ncands_all(candidate_set, solution_set, wordset_vec, parallel=True, verbose=True):
     '''
 Tests each candidate in the `candidate_set` against each solution in the
 `solution_set` to check how many words would remain after filtering the
@@ -163,13 +110,13 @@ Returns a dataframe with:
 4. No. of words remaining after filtering (`ncands`)
     '''
     if parallel:
-        all_ncands = Parallel(n_jobs=5, verbose=1)(
+        all_ncands = Parallel(n_jobs=5, verbose=int(verbose))(
             delayed(compute_ncands_single)(input_word, solution, wordset_vec) \
-                for input_word in tqdm(candidate_set.word) \
+                for input_word in tqdm(candidate_set.word, disable=not verbose) \
                 for solution in solution_set.word)
     else:
         all_ncands = []
-        for input_word in tqdm(candidate_set.word):
+        for input_word in tqdm(candidate_set.word, disable=not verbose):
             for solution in solution_set.word:
                 all_ncands.append(
                     compute_ncands_single(input_word, solution, wordset_vec)
@@ -186,7 +133,8 @@ Computes the entropy of a given set of categories. Takes in a Pandas series
 `x`, computes the relative frequencies, and then returns the entropy score.
     '''
 
-    probs = x.value_counts(normalize=True)
+    _, counts = np.unique(x, return_counts=True)
+    probs = counts / np.sum(counts)
     return -np.sum(probs * np.log(probs))
 
 
