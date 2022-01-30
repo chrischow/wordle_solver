@@ -6,7 +6,7 @@ Numerous articles have already been written on Wordle, covering *breadth* for po
 
 > Talk about how articles say this seed word is the best or that is the best. Ultimately, it depends on the approach that their solvers used. If you change the algorithm, the best word might change. We need a standardised way to compare Wordle solvers.
 
-> Propose a framework (lol). Each submission must have the full strategy: the seed word, the ranking algorithm, other decision rules (e.g. prioritising between solving vs. filtering, dealing with specific cases). Each submission must be measured in terms of some standard metrics: average number of steps, failure rate, percent of games solved in 3 steps or under, worst performance. Also consider comparing your strategy against others' results.
+> Propose a framework (lol). Each submission must have the full strategy: the seed word, the ranking algorithm, other decision rules (e.g. prioritising between solving vs. filtering, dealing with specific cases). Each submission must be measured in terms of some standard metrics: average number of steps (general solving ability), failure rate (success), percent of games solved in 3 steps or under (street cred value).
 
 > Seed words matter, but they're optimal conditional on the other components of the strategy. Need a more structured way to evaluate strategies.
 
