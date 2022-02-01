@@ -197,6 +197,10 @@ class Wordle():
             # Update candidates
             self.candidates = filter_candidates(self.candidates, self.solutions)
 
+            # Fix for infinite loops
+            self.solutions = self.solutions.loc[~self.solutions.word.isin(self.guesses)]
+            self.candidates = self.candidates.loc[~self.candidates.word.isin(self.guesses)]
+            
         if self.verbose:
             print(f'{guess.upper()} --> {feedback.upper()}: {self.solutions.shape[0]} solutions remaining.')
 
@@ -242,7 +246,7 @@ class Wordle():
             else:
                 print('No data to display.')
         
-    def optimise(self, method='ncands'):
+    def optimise(self, method='ncands', n_jobs=-2, backend='loky', by='bucket_entropy'):
         if not method in ['ncands', 'lf', 'expected_gyx']:
             raise ValueError('Please choose `ncands`, `lf`, or `expected_gyx`.')
         
@@ -263,12 +267,17 @@ class Wordle():
             # Initialise solutions numpy array
             solutions_vector = encode_set(self.solutions)
             
-            df_scores = compute_ncands_all(candidates, self.solutions, solutions_vector, verbose=self.verbose)
-            df = summarise_ncands(df_scores)
+            df_scores = compute_ncands_all(candidate_set=candidates,
+                                           solution_set=self.solutions,
+                                           wordset_vec=solutions_vector,
+                                           n_jobs=n_jobs, backend=backend,
+                                           verbose=self.verbose)
+            df = summarise_ncands(df_scores, by=by)
 
         elif method == 'expected_gyx':
             # Compute scores
-            df = get_gyx_scores_all(candidates, self.solutions, verbose=self.verbose)
+            df = get_gyx_scores_all(candidate_set=candidates, solution_set=self.solutions,
+                                    n_jobs=n_jobs, backend=backend, verbose=self.verbose)
             
         elif method == 'lf':
             # Compute scores

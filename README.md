@@ -10,15 +10,17 @@ Numerous articles have already been written on Wordle, covering *breadth* for po
 
 > Seed words matter, but they're optimal conditional on the other components of the strategy. Need a more structured way to evaluate strategies.
 
-| Source | Approach | Recommendations |
-| :----- | :------- | :-------------- |
-| [Tyler Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) | Expected green / yellow / grey scores; expected remaining candidates | Seed words: `soare`, `roate`, or `raise` |
-| [Sejal Dua](https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723) | Expected green / yellow / grey scores | Seed words: `soare`, `stare`, `roate`, `raile`, or `arose` |
-| [Tom Neill](https://notfunatparties.substack.com/p/wordle-solver) | Expected remaining candidates | Seed word: `raise` |
-| [John Stechschulte](https://towardsdatascience.com/optimal-wordle-d8c2f2805704) | Information entropy for expected green / yellow scores | Top 10 seed words: `tares`, `lares`, `rales`, `rates`, `nares`, `tales`, `tores`, `reais`, `dares`, `arles`, or `lores`. Words that get the most coloured tiles and words with the most vowels are not necessarily the best. |
-| [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | One word: `tales`; Two words: `cones-trial`; Three words: `hates-round-climb` |
-| [Ben Bellerose](https://towardsdatascience.com/wordle-solver-using-python-3-3c3bccd3b4fb) | Letter position probability | Nil |
-
+| Source | Approach | Seed Word | Average No. of Steps | Worst Case |
+| :----- | :------- | :-------- | :-----: | :--: |
+| [Tyler Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) | Expected green / yellow scores | `soare` | 3.690 | 8 steps |
+| [Tyler Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) | Expected remaining candidates | `roate` | 3.494 | 5 steps |
+| [Tyler Glaiel](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) | Expected remaining candidates | `raise` | 3.495 | Not provided | 
+| [Sejal Dua](https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723) | Average green / yellow / grey scores | `soare`, `stare`, `roate`, `raile`, or `arose` | Not provided | Not provided |
+| [Tom Neill](https://notfunatparties.substack.com/p/wordle-solver) | Expected remaining candidates | `raise` | Not provided | Not provided |
+| [John Stechschulte](https://towardsdatascience.com/optimal-wordle-d8c2f2805704) | Information entropy for expected green / yellow scores | `tares`, `lares`, `rales`, `rates`, `nares`, `tales`, `tores`, `reais`, `dares`, `arles`, or `lores` | Not provided | Not provided |
+| [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | `tales` | 3.66 | Not provided |
+| [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Two words: `cones-trial` | 3.68 | Not provided |
+| [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Three words: `hates-round-climb` | Not provided | Not provided |
 
 ## The Game
 For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in as few steps as possible, and you only have six tries. On each guess, Wordle will tell you if each letter:

@@ -33,7 +33,8 @@ Returns:
     return input_word, green_avg, yellow_avg, weighted_avg
 
 
-def get_gyx_scores_all(candidate_set, solution_set, parallel=True):
+def get_gyx_scores_all(candidate_set, solution_set, parallel=True, n_jobs=-2,
+                       backend='loky', verbose=True):
     '''
 Computes the green/yellow/grey (GYX) scores for all candidates in the set
 `candidate_set` against each of the words in a set of answers `solution_set`.
@@ -50,7 +51,7 @@ Returns a dataframe with:
     '''
 
     if parallel:
-        raw_scores = Parallel(n_jobs=5, verbose=int(verbose))(
+        raw_scores = Parallel(n_jobs=n_jobs, backend=backend, verbose=int(verbose))(
             delayed(get_gyx_scores_single)(input_word, solution_set) \
                 for input_word in tqdm(candidate_set.word, disable=not verbose)
         )
@@ -96,7 +97,8 @@ of words in the wordset after filtering.
     return input_word, solution, fb, newset.shape[0]
 
 
-def compute_ncands_all(candidate_set, solution_set, wordset_vec, parallel=True, verbose=True):
+def compute_ncands_all(candidate_set, solution_set, wordset_vec, parallel=True,
+                       n_jobs=-2, backend='loky', verbose=True):
     '''
 Tests each candidate in the `candidate_set` against each solution in the
 `solution_set` to check how many words would remain after filtering the
@@ -110,7 +112,7 @@ Returns a dataframe with:
 4. No. of words remaining after filtering (`ncands`)
     '''
     if parallel:
-        all_ncands = Parallel(n_jobs=5, verbose=int(verbose))(
+        all_ncands = Parallel(n_jobs=n_jobs, backend=backend, verbose=int(verbose))(
             delayed(compute_ncands_single)(input_word, solution, wordset_vec) \
                 for input_word in tqdm(candidate_set.word, disable=not verbose) \
                 for solution in solution_set.word)
@@ -138,10 +140,11 @@ Computes the entropy of a given set of categories. Takes in a Pandas series
     return -np.sum(probs * np.log(probs))
 
 
-def summarise_ncands(df):
+def summarise_ncands(df, by='bucket_entropy'):
     '''
 Takes the output of `compute_ncands_all` (a dataframe) and summarises the
-results based on the evaluated candidate `word`s. Returns a dataframe with:
+results based on the evaluated candidate `word`s. For sorting, choose either
+`ncands_max, `bucket_entropy`, or `avg`. Returns a dataframe with:
 
 1. Candidate
 2. Max number of remaining candidates across a given solution set
@@ -164,7 +167,7 @@ results based on the evaluated candidate `word`s. Returns a dataframe with:
     df['ncands_mean_rank'] = df.ncands_mean.rank()
     df['bucket_entropy_rank'] = df.bucket_entropy.rank(ascending=False)
     df['avg_rank'] = df[['ncands_max_rank', 'bucket_entropy_rank']].mean(axis=1)
-    df = df.sort_values('avg_rank').reset_index(drop=True).head(10)
+    df = df.sort_values(f'{by}_rank').reset_index(drop=True).head(10)
 
     return df
 
