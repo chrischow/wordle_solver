@@ -41,6 +41,18 @@ def load_data(path):
 
     return wordle_candidates, wordle_answers
 
+def load_word_popularity(path):
+    word_popularity = pd.read_table(f'{path}/en_words_1_5-5.txt', delimiter=' ', header=None, index_col=None,
+                                    names=['word_len', 'word_freq', 'n_articles']).reset_index()
+    word_popularity = word_popularity.rename(columns={'index': 'word'})
+
+    # Filter by english
+    alphabet = list('abcdefghijklmnopqrstuvwxyz')
+    word_popularity = word_popularity.loc[
+        word_popularity.word.apply(lambda x: all([l in alphabet for l in x]))] \
+            .reset_index(drop=True)
+    return word_popularity
+
 # *------------*
 # | GAME LOGIC |
 # *------------*
@@ -301,3 +313,12 @@ class Wordle():
             'feedback': self.feedback,
             'ncands': self.ncands
         }
+
+    def reprioritise(self, data, plugin='popularity'):
+        if plugin == 'popularity':
+            df_popularity = self.solutions.merge(
+                data[['word', 'word_freq', 'n_articles']],
+                how='left', left_on='word', right_on='word')
+            
+            df_popularity = df_popularity.sort_values('word_freq', ascending=False)
+            return df_popularity[['word', 'word_freq', 'n_articles']]

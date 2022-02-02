@@ -1,14 +1,8 @@
 # Wordle2Vec: A Vectorised Approach to Solving Wordle
-Over the past few weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only since last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been building a system to play the game optimally. This post documents my thoughts on Wordle, and part of my approach to building a solver.
+Over the past few weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only since last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been developing a system to try to play the game optimally.  As I built on the existing work by other authors (the technical ones only), I found conflicting recommendations for the best starting/seed words. My hypothesis was that the best seed word depends on how you play the game. The contribution of this post is therefore to test this hypothesis, and show that other components of a Wordle strategy affect what the best seed words are.
 
 ## The Word on Wordle
-Numerous articles have already been written on Wordle, covering *breadth* for possible seed words and ranking algorithms for candidate words (see table below). Most of them focus on deciding on the optimal seed word by running simulations. Of these, only one or two elaborate on the overall strategy for the game, and how that strategy is implemented in technical terms. My series of posts contribute through *depth*: we investigate what happens under the hood of a Wordle bot at each step in a typical Wordle game.
-
-> Talk about how articles say this seed word is the best or that is the best. Ultimately, it depends on the approach that their solvers used. If you change the algorithm, the best word might change. We need a standardised way to compare Wordle solvers.
-
-> Propose a framework (lol). Each submission must have the full strategy: the seed word, the ranking algorithm, other decision rules (e.g. prioritising between solving vs. filtering, dealing with specific cases). Each submission must be measured in terms of some standard metrics: average number of steps (general solving ability), failure rate (success), percent of games solved in 3 steps or under (street cred value).
-
-> Seed words matter, but they're optimal conditional on the other components of the strategy. Need a more structured way to evaluate strategies.
+Numerous articles have already been written on Wordle, many of which focused on starting (seed) words. Most authors simulated a large number of games to identify seed words that produced the best final outcome in terms of the **average number of steps required to solve the games**. However, not all of them did so, and not all of them had other metrics that measured the performance of their Wordle solvers (see table below).
 
 | Source | Approach | Seed Word | Average No. of Steps | Worst Case |
 | :----- | :------- | :-------- | :-----: | :--: |
@@ -22,6 +16,14 @@ Numerous articles have already been written on Wordle, covering *breadth* for po
 | [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Two words: `cones-trial` | 3.68 | Not provided |
 | [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Three words: `hates-round-climb` | Not provided | Not provided |
 
+Another potential issue with the existing content were the conclusions on what was "best". I observed that different authors have recommended different seed words, but used different approaches to run their simulations. This led to the hypothesis that the other components of a Wordle strategy could be the reason why we saw different recommended seed words.
+
+Therefore, building on the literature to test the hypothesis above, we will:
+
+1. Test different configurations of a Wordle strategy on the list of seed words from above i.e. all recommendations
+2. Present more metrics on each Wordle solver's performance
+
+
 ## The Game
 For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in as few steps as possible, and you only have six tries. On each guess, Wordle will tell you if each letter:
 
@@ -34,69 +36,96 @@ That's all there is to it! It sounds simple, but the game isn't easy for both hu
 > **Note:** The full sets of words can be retrieved from the website's main script. Use your browser's developer console to access it.
 
 ## Wordle Strategy
-Much like Wheel of Fortune, in Wordle, we balance between **solving** (guessing a word that we think is the solution) and **collecting information** (using words to tease out what letters might be in the solution). A human would probably play with the following strategy:
+Much like Wheel of Fortune, in Wordle, we balance between **solving** (guessing a word that we think is the solution) and **collecting information** (using words to tease out what letters might be in the solution) in terms of green, yellow, and grey tiles. A human would probably play with the following strategy:
 
-1. **Round 1: Collect as much information as possible.** We have no information at this point, so we choose a statistically optimal seed word. The better the first guess, the more information we will collect in terms of green, yellow, and grey tiles.
-2. **Round 2: Collect as much information as possible *using the feedback from step 1***. While we would earn massive street cred from solving the game in two steps, this is very difficult. Hence, the best we could do in step 2 is collect more information by using a word with completely different letters from the seed word.
-3. **Round 3: Depends!** If we have obtained enough information (in terms of greens and yellows), perhaps we could go for a solve (like Wheel of Fortune). Otherwise, it may be better to play it safer and choose another word to get more clues.
-4. **Round 4: Again, it depends.** We do the same as we did in step 3. But, this step is where most problems are solved. We could be more aggressive by prioritising a solve over information collection.
-5. **Round 5: AGAIN, it depends.** We do the same as we did in steps 3 and 4. But, the balance should lie even more toward solving than collecting information.
+1. **Round 1: Collect as much information as possible.** We have no information at this point, so we choose a statistically optimal seed word. The better the first guess, the more information we will *probably* collect.
+2. **Round 2: Collect as much information as possible *using the feedback from round 1***. While we would earn massive street cred from solving the game in two steps, this is very difficult. Hence, the best we could do in round 2 is collect more information by using a word with completely different letters from the seed word.
+3. **Round 3: Depends!** If we have obtained enough information, we could go for a solve. Otherwise, it may be better to play it safer and choose another word to get more clues.
+4. **Round 4: Again, it depends.** We do the same as we did in round 3. But, this round is where most problems are solved. We could be more aggressive by prioritising a solve over information collection.
+5. **Round 5: AGAIN, it depends.** We do the same as we did in rounds 3 and 4. But, the balance should lie even more toward solving than collecting information.
 6. **Round 6: 100% Solve.** It's entirely possible that you're still left with several feasible solutions by round 6. If it still isn't clear what the solution is, just hazard a guess! What do you have to lose?
 
 As you can probably see, a strategy is more than just the seed word. It also includes (1) decision rules to prioritise solving vs. collecting information, and (2) a ranking algorithm to choose words.
 
-## A Wordle Solver
+## A Proposed Wordle Bot
 
 ### Overview
-The bot's aim is simple: filter the list of 2,315 possible solutions down to just 1 word in as few tries as possible. Since it does not use a brute force approach to enumerate all possible pathways to the solution, it moves step by step. In each step (round), it ranks words and selects the best one, and then repeats this until it gets the answer.
+The Wordle bot I've built follows the same approach. The start state for the bot has (1) a candidate set comprising all 12,972 accepted words, and (2) a solution set comprising all 2,315 solution words. It will repeatedly measure (1) against (2), and update them both in the course of each game. Note how this is inhuman: it has perfect memory of all words, and is able to perfectly distinguish between accepted words and solution words.
 
-The key component of the bot is its ranking algorithm. It has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey scores, and (3) a composite of max number of remaining candidates and what I term the *bucket entropy*.
+The bot moves one step at a time, doing the same things in every step/round:
 
-In each step, the bot uses one of the algorithms above to calculate scores for all *relevant* candidates against all feasible solutions. Then, it simply picks the highest-scoring word as the next guess.
+1. Use a ranking algorithm to calculate scores for all remaining candidates.
+2. Submit the candidate with the best score as the guess for that step.
+3. Use the feedback to (a) filter the candidate set and (b) filter the solution set. We also eliminate candidates that were already guessed, and candidates that contain letters that are no longer present in the remaining solution set, i.e. they have no value for filtering candidates further.
+4. Put the filtered/remaining candidate and solution sets into a ranking algorithm to calculate scores for each remaining candidate.
+5. Sort the remaining candidates by score.
+6. Submit the candidate with the best score as the next guess.
+7. Repeat from step 1 until the feedback from step 2 is `GGGGG`.
 
-Because the ranking algorithm is computationally expensive, we minimise the amount of computations we have to do by iteratively selecting *feasible* solutions and *relevant* candidates. Feasible solutions are those that match the feedback (green/yellow/grey) obtained in prior steps. Relevant candidates are those that still have some ability to filter solutions. Suppose you have 10 feasible solutions remaining, and **none** of them have the letters `a`, `e`, `r`, `s`, and `t` in positions 1 to 5. Then, it makes no sense to continue evaluating candidate words that are made up of only these letters e.g. `aster`, `tease`, or `tress`. This is because they are of no help in filtering the *remaining* feasible solutions. Therefore, we can safely eliminate these words from the candidate set. The leftover candidates are the relevant ones.
+I developed a `Wordle` class to facilitate games, simulated or otherwise. As this is not the focus for the post, I will be skipping over the details of its implementation. I mention it only to show how tidy it makes the code for simulating a game with the bot's general logic:
 
-### Implementation
-Implemented a `Wordle` class with the following methods:
+```py
+def play_game(input_word, solution):
 
-- Standard `__init__(self, candidates, solutions, solution=None, verbose=True)`: To initialise the class with several internal variables. These include:
-    - `guess`: The guesses made so far
-    - `feedback`: The feedback collected so far
-    - `ncands`: The number of remaining candidates after each step
-    - `candidates`: The dataframe of relevant candidates
-    - `solutions`: The dataframe of feasible solutions
-    - `optimisations`: Cache of results from running the ranking algorithms on the existing candidates and solutions
-    - `last_optimised`: Record of when each ranking algorithm's cache was stored
-    - `step`: Current round in the game
-    - `solved`: Game completion status
-    - `verbose`: Whether to print out results - turn this off for large scale simulations
-    - `solution`: Used only if a solution is provided
-- `guess(guess, feedback=None)`: Makes a guess and updates the game state
-    - Filters solutions and candidates, but **does not rank them**
-    - Logs guesses, feedback, and number of candidates remaining after the step
-    - Automatically solves the game if there is only one solution remaining
-    - If the object is used as a simulation, no feedback is required
-- `status()`: To print out the history of guesses, feedback, and number of candidates remaining after each step thus far
-- `optimise(method='ncands')`: Runs ranking algorithms on candidate set with respect to the solution set
-    - `ncands`: Composite ranking of the max number of candidates remaining and *bucket entropy*
-    - `lf`: Sum of letter frequencies of each word
-    - `expected_gyx`: Expected green, yellow, and grey scores
-- `records()`: Prints out the history of steps, guesses, feedback, and numbre of candidates remaining after each step
+    game = Wordle(wordle, wordle_answers, solution=solution, verbose=False)
+    
+    while not game.solved:
+        if game.step == 0:
+            game.guess(input_word)
+        else:
+            game.guess(game.optimisations[method.lower()].word.iloc[0])
+        game.optimise(method='expected_gyx', n_jobs=-2)
+        
+    return game.records()
+```
 
-## Feedback Bucket Entropy
-This is just a short name for "information entropy of words bucketed across feedback codes". 
+**Note:** It does not use brute force to enumerate all possibilities before deciding on all steps.
 
-### Simplifying Entropy
-First, we explain entropy. I find Vajapeyam's (2014) [paper on Shannon's Entropy metric](https://arxiv.org/ftp/arxiv/papers/1405/1405.2061.pdf) the most useful explanation of the concept. Most articles that explain entropy like to use the word "surprise" - and yes, these authors use scare quotes, which the [MLA Style Center](https://style.mla.org/scare-quotes-origins/) says are *used to convey an ironic, skeptical, or even derisive stance toward the word or phrase they enclose; they signal a nonstandard use, which often **requires a reader to read between the lines to intuit the particular sense intended by the author**.* I understand information as the difference between what you already know compared to what the actualisation of a random variable gives you. If I were to attempt to explain what "surprise" (not scare quoting here) means, it would go something like this:
+### Ranking Algorithms
+After much testing, my sense is that the key component of a Wordle strategy is the ranking algorithm (or for humans, the decision process for what word to guess next). We will discuss the evidence for this hypothesis in the next section. My Wordle bot has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey (I term it GYX for simplicity) scores, and (3) max number of remaining candidates. Each algorithm computes scores for all remaining candidates with respect to the remaining solutions.
 
-Let's consider the classic example that uses two-sided coins. Suppose that there are three coins: one is completely biased toward heads, one that turns up heads 75% of the time, and one that is perfectly fair (50-50). We are interested in figuring out how much new information we would be collecting by flipping each of them.
+#### Letter Frequency 
+This algorithm ranks words by how popular its constituent letters are. First, it counts the frequencies of letters for all remaining solutions to produce a lookup table with letters as keys and counts as values. Then, it scores each remaining candidate by taking the sum of frequency scores for the letters in that candidate words. Pick the candidate with the highest score.
 
-For the biased coin, we *already know that we will get heads on the next flip*. Therefore, there is no point in collecting any new data (i.e. a new flip). That is, there is zero new **information** gained if we collected new data.
+#### Expected Green/Yellow/Grey Tile Scores
+This algorithm ranks words by the expected information gained, based on the number of green tiles and yellow tiles returned, averaged across all remaining solutions. I called this GYX scores for simplicity, and because of the way I coded grey (`X`) in the feedback for the `Wordle` class. For each remaining candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, and (2) calculates `GYX Score = 2 * No. of Greens + No. of Yellows` for each feedback. This produces a list of `N_s = No. of remaining solutions` scores per candidate. Finally, it (3) averages all the scores to produce a single score for that candidate. Pick the candidate with the highest score, because it is expected to return more information in the form of green and yellow tiles.
 
-For the 75%-heads coin, things are slightly better. We know that we will get heads three quarters of the time, but a random one quarter of the flips would give us tails. Therefore, there is some uncertainty in what would actually happen. Our best baseline would be to generally expect heads, but also expect to be wrong 25% of the time. Consequently, there is *some* point in collecting new data, since we would gain new information on one quarter of the flips.
+#### Max Number of Remaining Candidates
+This algorithm ranks candidates by how many possibilities they would eliminate / leave behind if guessed, averaged across all remaining solutions. The idea is to choose words that cut the candidate set down the most. For each candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, (2) uses the feedback to filter (a copy of) the remaining candidate set, and (3) counts the number of remaining candidates. That results in a list of `N_s` counts (of remaining candidates) for that candidate. Finally, the algorithm (4) takes the average of all these counts. Pick the candidate with the lowest score, because it eliminates the most possibilities in the worst case.
 
-For the perfectly fair coin, we don't know what the outcome will be on the next flip, because the chances are exactly 50-50. Our baseline knowledge about the discrete outcome is completely uncertain. Therefore, we gain a lot of information whenever any new data on coin flips is collected.
+### Decision Rules
+Through some other tests, I discovered some rules that led to improvements in the strategies. However, in view of the amount of content already covered in this post, I'll save these insights for a follow-up post.
 
-Extending the example to a 100-sided die, suppose we had (1) a completely biased die (100% for one side, 0% for the remaining 99), (2) a somewhat biased die (10% for 10 sides and 0% for the remaining 90), and (3) a completely fair die (1% per side). The thinking is exactly the same: our baseline knowledge will be the highest for (1), the next highest for (2) but still with some uncertainty, and complete uncertainty for (3). Therefore, the result of the die roll would give us the least information for (1), more information for (2), and the most information for (3).
+## Simulations
+I ran each of the words recommended by the various sources from the previous section (see below) against the full set of 2,315 solution words **three times**: once for each ranking algorithm. Overall, that's 17 "best" words by 2,315 solution words by 3 ranking algorithms for a total of **118,065 games of Wordle**.
 
-The general idea here is that the more spread out the probabilities/frequencies are, the less baseline knowledge we have. And the less baseline knowledge we have, the more information we would gain when some random variable is actualised. **The more information gained, the greater the entropy**.
+```
+1. arles    10. rates
+2. arose    11. reais
+3. dares    12. roate
+4. lares    13. soare
+5. lores    14. stare
+6. nares    15. tales
+7. raile    16. tares
+8. raise    17. tores
+9. rales
+```
+
+To allow other authors to make comparisons to the strategies tested, I identified three metrics to present for every strategy (seed word + ranking algorithm + decision rules):
+
+1. Average number of steps taken to solve the challenge
+2. Solution success rate (out of 2,315 challenges)
+3. The proportion of challenges solved within 3 steps or less
+
+To generate these metrics and perform diagnosis on the strategies, I logged the results from each step from the simulations, including (1) the candidates guessed, (2) the feedback, and (3) the number of candidates remaining after each step.
+
+### Results
+Overall, the results showed that:
+
+1. The ranking algorithms mattered for all three metrics
+2. 
+
+Note that the results presented in this post are for the specific ranking algorithms, **in the way that I implemented them**. 
+
+
+
