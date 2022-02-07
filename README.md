@@ -49,10 +49,10 @@ As you can probably see, a strategy is more than just the seed word. It also inc
 
 > **Note:** We can actually remove seed words as a strategy component altogether if we apply the ranking algorithm in step 0 to the entire set of candidates to rank them.
 
-## A Proposed Wordle Bot
+## A Simple Wordle Bot
 
 ### Overview
-My proposed Wordle bot follows the broad strategy and implements the two other components of the strategy: the decision rules and a ranking algorithm for choosing words.
+My Wordle bot follows the broad strategy and implements the two other components of the strategy: the decision rules and a ranking algorithm for choosing words.
 
 The bot starts off with (1) a candidate set comprising all 12,972 accepted words, and (2) a solution set comprising all 2,315 solution words. It will repeatedly measure (1) against (2), and update them both in the course of each game. Note how this is inhuman: it has perfect memory of all words, and is able to perfectly distinguish between accepted words and solution words. It is also able to evaluate all possible scenarios (candidate vs. solution) one step ahead to choose the statistically optimal outcome.
 
@@ -81,7 +81,7 @@ def play_game(input_word, solution):
     return game.records()
 ```
 
-**Note:** The bot does not use brute force to enumerate all *game outcomes* before deciding on all steps.
+**Note:** The bot does not use brute force to enumerate all game *outcomes* before deciding on all steps.
 
 ### Ranking Algorithms
 The ranking algorithm is arguably the most critical component of the strategy because it determines *what* guesses are made. Decision rules only decide *how* guesses are made (solve vs. collect info), and the seed word is a *product* of the ranking algorithm in step 0, before the game starts.
@@ -151,7 +151,7 @@ Seed words:
 
 Overall, that's 17 "best" words by 2,315 solution words by 5 strategies for a total of **196,775 games of Wordle**.
 
-To allow other authors to make comparisons to the strategies tested, I identified three metrics to present for every strategy (seed word + ranking algorithm + decision rules):
+To allow other authors to make comparisons to the strategies tested, I identified three metrics to measure every strategy (seed word + ranking algorithm + decision rules):
 
 1. Average number of steps taken to solve the challenge - a measure of strategy performance in terms of steps
 2. Solution success rate (out of 2,315 challenges) - a measure of strategy performance in terms of solved problems
@@ -171,62 +171,80 @@ To generate these metrics and perform diagnoses on the strategies, I logged the 
 }
 ```
 
-### Results
-Overall, the results showed that the "best" seed word depended on (1) the other strategy components - especially the ranking algorithm - and (2) the performance metric used.
+## Results
 
-Here were the rank-1 seed words for the respective strategy settings and metrics:
+### Overall
+Overall, the results showed that the "best" seed word depended on (1) the other strategy components - especially the ranking algorithm - and (2) the performance metric used. Here were the rank-1 seed words for the respective strategy settings and metrics:
 
 | Ranking Algorithm | Mean No. of Steps | Success Rate | % Solved Within 3 Steps |
 | :---------------: | :---------------: | :----------: | :---------------------: |
-| Max No. of Candidates | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.6017 | <code style="background-color:#F6DC75; color: black;">tares</code> - 99.78% | <code style="background-color:#ff5364; color: white;">raile</code> - 48.12% | 
+| Max No. of Candidates | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.6017 | <code style="background-color:#120c6e; color: white;">tares</code> - 99.78% | <code style="background-color:#ff5364; color: white;">raile</code> - 48.12% | 
 | Letter Frequencies | <code style="background-color:#7b73f0; color: white;">stare</code> - 3.7287 | <code style="background-color:#27ddcb; color: black;">tales</code> - 99.44% | <code style="background-color:#ffbac1; color: black;">arose</code> - 42.98% |
 | Letter Frequencies + Popularity | <code style="background-color:#333f50; color: white;">tores</code> - 3.7702 | <code style="background-color:#333f50; color: white;">tores</code> - 99.22% | <code style="background-color:#ffbac1; color: black;">arose</code> - 42.33% |
-| GYX Scores | <code style="background-color:#7b73f0; color: white;">stare</code> - 3.8320 | <code style="background-color:#27ddcb; color: black;">tales</code> - 99.09% | <code style="background-color:#120c63; color: white;">roate</code> - 38.57% |
-| GYX Scores + Popularity | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.8898 | <code style="background-color:#27ddcb; color: black;">tales</code> - 98.79% | <code style="background-color:#120c6e; color: white;">roate</code> - 37.93% |
+| GYX Scores | <code style="background-color:#7b73f0; color: white;">stare</code> - 3.8320 | <code style="background-color:#27ddcb; color: black;">tales</code> - 99.09% | <code style="background-color:#F6DC75; color: black;">roate</code> - 38.57% |
+| GYX Scores + Popularity | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.8898 | <code style="background-color:#27ddcb; color: black;">tales</code> - 98.79% | <code style="background-color:#F6DC75; color: black;">roate</code> - 37.93% |
+
+From the boxplots below, we can see big differences in the distribution of metrics acros the various ranking algorithm vs. decision rule combinations. We also see that the ranks of the "best" seed words change depending on which ranking algo / decision rule / metric we use.
+
+<figure align="center">
+    <img src="results/strat_mean_steps.png">
+    <figcaption>Mean Steps vs. Ranking Algorithm + Decision Rule. Image by author.</figcaption>
+</figure>
+
+<figure align="center">
+    <img src="results/strat_success_rate.png">
+    <figcaption>Mean Steps vs. Ranking Algorithm + Decision Rule. Image by author.</figcaption>
+</figure>
+
+<figure align="center">
+    <img src="results/strat_3steps.png">
+    <figcaption>Mean Steps vs. Ranking Algorithm + Decision Rule. Image by author.</figcaption>
+</figure>
+
+### The Best Strategies (So Far)
+If you're just here for the best strategies, here they are. All of them involved the **Max No. of Candidates** ranking algorithm and **Baseline** decision rule. The top strategies by the **average number of steps to reach a solution** were:
+
+| Rank | Seed Word | Ranking Algo | Decision Rule | Mean No. of Steps |
+| :--: | :-------: | :----------: | :-----------: | :---------------: |
+| 1    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline | 3.6017 | 
+| 2    | <code style="background-color:#ff5364; color: white;">raile</code> | Max No. of Candidates | Baseline | 3.6069 |
+| 3    | <code style="background-color:#7b73f0; color: white;">stare</code> | Max No. of Candidates | Baseline | 3.6112 |
+| 4    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max No. of Candidates | Baseline | 3.6117 |
+| 5    | <code style="background-color:#120c6e; color: white;">tares</code> | Max No. of Candidates | Baseline | 3.6121 |
+
+The top strategies by **solution success rate** were close. The difference between ranks 1 to 2 and 2 to 3 were 0.0432%, which was in fact 1 out of 2,315 solutions.
+
+| Rank | Seed Word | Ranking Algo | Decision Rule | Success Rate | Lead Over Next Rank |
+| :--: | :-------: | :----------: | :-----------: | :----------: | :-----------------: |
+| 1    | <code style="background-color:#120c6e; color: white;">tares</code> | Max No. of Candidates | Baseline | 99.78% | 1 word |
+| 2    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline | 99.74% | 1 word |
+| 3    | <code style="background-color:#333f50; color: white;">tores</code> | Max No. of Candidates | Baseline | 99.70% | - |
+| 3    | <code style="background-color:#8490b7; color: white;">arles</code> | Max No. of Candidates | Baseline | 99.70% | - |
+| 3    | <code style="background-color:#8497b0; color: white;">rales</code> | Max No. of Candidates | Baseline | 99.70% | 1 word |
 
 
+The top strategies by **proportion of challenges solved within 3 steps or less** were:
 
+| Rank | Seed Word | Ranking Algo | Decision Rule | % Solved in 3 Steps | Lead Over Next Rank |
+| :--: | :-------: | :----------: | :-----------: | :---------------------: | :-----------------: |
+| 1    | <code style="background-color:#ff5364; color: white;">raile</code> | Max No. of Candidates | Baseline |  48.12% | 11 words |
+| 2    | <code style="background-color:#120c6e; color: white;">roate</code> | Max No. of Candidates | Baseline |  47.65% | 12 words |
+| 3    | <code style="background-color:#7b73f0; color: white;">stare</code> | Max No. of Candidates | Baseline |  47.13% | 3 words |
+| 4    | <code style="background-color:#8497b0; color: white;">soare</code> | Max No. of Candidates | Baseline |  47.00% | 6 words |
+| 5    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline |  46.74% | 12 words |
 
-If you're just here for the best strategies, here they are. All of them involved the **Max No. of Candidates** ranking algorithm and **Baseline** decision rule.
+If we had to force fit a "best" strategy, we could combine the scores. I combined the metrics by scaling each one to the range `[0, 1]` and taking the average. The "top" strategies based on this **composite score** were:
 
-The top strategies by lowest average number of steps to reach a solution were:
+| Rank | Seed Word | Ranking Algo | Decision Rule | Composite Score |
+| :--: | :-------: | :----------: | :-----------: | :-------------: |
+| 1    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline | 96.53% |
+| 2    | <code style="background-color:#ff5364; color: white;">raile</code> | Max No. of Candidates | Baseline | 95.97% |
+| 3    | <code style="background-color:#120c6e; color: white;">tares</code> | Max No. of Candidates | Baseline | 93.92% |
+| 4    | <code style="background-color:#333f50; color: white;">tores</code> | Max No. of Candidates | Baseline | 93.62% |
+| 5    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max No. of Candidates | Baseline | 93.40% |
 
-| Rank | Seed Word | Mean No. of Steps |
-| :--: | :-------: | :---------------: |
-| 1    | <code style="background-color:#27ddcb; color: black;">tales</code>   | 3.6017 | 
-| 2    | <code style="background-color:#ff5364; color: white;">raile</code>   | 3.6069 |
-| 3    | <code style="background-color:#7b73f0; color: white;">stare</code>   | 3.6112 |
-| 4    | <code style="background-color:#120c6e; color: white;">roate</code>   | 3.6117 |
-| 5    | <code style="background-color:#F6DC75; color: black;">tares</code>   | 3.6121 |
+Of course, these results are based on my implementation of the techniques described above. 
 
-The top strategies by solution success rate were close. The difference between ranks 1 to 2 and 2 to 3 were 0.0432%, which was in fact 1 out of 2,315 solutions.
-
-| Rank | Seed Word | Success Rate | Lead Over Next Rank |
-| :--: | :-------: | :----------: | :-----------------: |
-| 1    | <code style="background-color:#F6DC75; color: black;">tares</code>   | 99.78% | 1 word |
-| 2    | <code style="background-color:#27ddcb; color: black;">tales</code>   | 99.74% | 1 word |
-| 3    | <code style="background-color:#333f50; color: white;">tores</code>   | 99.70% | - |
-| 3    | <code style="background-color:#8490b7; color: white;">arles</code>   | 99.70% | - |
-| 3    | <code style="background-color:#8497b0; color: white;">rales</code>   | 99.70% | 1 word |
-
-
-The top strategies by proportion of challenges solved within 3 steps or less were:
-
-| Rank | Seed Word | % Solved within 3 steps | Lead Over Next Rank |
-| :--: | :-------: | :-------------------------------------------: | :-----------------: |
-| 1    | <code style="background-color:#ff5364; color: white;">raile</code>   | 48.12% | 11 words |
-| 2    | <code style="background-color:#120c6e; color: white;">roate</code>   | 47.65% | 12 words |
-| 3    | <code style="background-color:#7b73f0; color: white;">stare</code>   | 47.13% | 3 words |
-| 4    | <code style="background-color:#8497b0; color: white;">soare</code>   | 47.00% | 6 words |
-| 5    | <code style="background-color:#27ddcb; color: black;">tales</code>   | 46.74% | 12 words |
-
-If we had to force fit a "best" strategy, we could combine the scores. I combined the metrics by scaling each one to the range `[0, 1]` and taking the average. The "top" strategies based on this composite score were:
-
-| Rank | Seed Word | Composite Score |
-| :--: | :-------: | :-------------: |
-| 1    | <code style="background-color:#27ddcb; color: black;">tales</code>   | 96.53% |
-| 2    | <code style="background-color:#ff5364; color: white;">raile</code>   | 95.97% |
-| 3    | <code style="background-color:#F6DC75; color: black;">tares</code>   | 93.92% |
-| 4    | <code style="background-color:#333f50">tores</code>   | 93.62% |
-| 5    | <code style="background-color:#120c6e">roate</code>   | 93.40% |
-
+## What Do These Mean?
+If you're a computer, you're in luck. If you're a human, not so much. 
+Just as it would be inappropriate to compare human and computer Wordle players, it is inappropriate to expect that a strategy optimal for a computer is optimal for a human player.
