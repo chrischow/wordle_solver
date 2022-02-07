@@ -298,9 +298,6 @@ class Wordle():
                                'letter_freq': candidates.word.apply(compute_lf_score, freqs=lf_freqs)})
             df = df.sort_values('letter_freq', ascending=False).reset_index(drop=True)
         
-        # Few solutions left: use popularity
-        # if method != 'lf' and self.solutions.shape[0] <= 10:
-        
         # Cache
         self.optimisations[method] = df
         self.last_optimised[method] = self.step
@@ -314,11 +311,53 @@ class Wordle():
             'ncands': self.ncands
         }
 
-    def reprioritise(self, data, plugin='popularity'):
+    def reprioritise(self, plugin='popularity', data=None):
         if plugin == 'popularity':
-            df_popularity = self.solutions.merge(
+            df = self.solutions.merge(
                 data[['word', 'word_freq', 'n_articles']],
                 how='left', left_on='word', right_on='word')
             
-            df_popularity = df_popularity.sort_values('word_freq', ascending=False)
-            return df_popularity[['word', 'word_freq', 'n_articles']]
+            df = df.sort_values('word_freq', ascending=False)
+            return df[['word', 'word_freq', 'n_articles']]
+        elif plugin == 'splitter':
+            
+            # Copy data
+            wc = self.candidates.copy()
+            df = self.solutions.copy()
+
+            # Extract letters
+            for i in range(5):
+                df[f'p{i}'] = df.word.str[i]
+                wc[f'p{i}'] = wc.word.str[i]
+
+            # Count number of unique columns
+            unique_mask = df[[f'p{i}' for i in range(5)]].nunique() > 1
+            cols = unique_mask.index[unique_mask]
+
+            # 1 unique column only
+            if unique_mask.sum() == 1:    
+                total_letters = df.shape[0]
+                wc['scores'] = 0
+                wc['counts'] = 0
+                
+                # Get unique letters
+                unique_letters = np.unique(np.squeeze(df[cols].values))
+                for i, letter in enumerate(unique_letters):
+                    contains_letter = wc[cols[0]].eq(letter).astype(int)
+                    # Apply highest weight 
+                    wc['scores'] = wc['scores'] + (total_letters - i) * contains_letter
+                    wc['counts'] = wc['counts'] + contains_letter
+
+                wc = wc.sort_values('scores', ascending=False).reset_index(drop=True)
+                return wc
+
+            elif unique_mask.sum() == 2:
+                from collections import Counter
+                wc['scores'] = 0
+                for col in cols:
+                    counter = Counter(df[col])
+                    temp_scores = pd.to_numeric(wc[col].replace(counter), errors='coerce').fillna(0) 
+                    wc['scores'] = wc['scores'] + temp_scores
+                
+                wc = wc.sort_values('scores', ascending=False).reset_index(drop=True)
+                return wc

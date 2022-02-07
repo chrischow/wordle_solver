@@ -1,5 +1,5 @@
 # Wordle2Vec: A Vectorised Approach to Solving Wordle
-Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, but only two weeks ago did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been developing a system to try to play the game optimally. As I built on the existing work by other authors (the technical ones only), I found conflicting recommendations for the best starting/seed words. My hypothesis was that the best seed word depends on how you play the game. The contribution of this post is therefore to test this hypothesis, and show that other components of a Wordle strategy affect what the best seed words are.
+Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, but only two weeks ago did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been developing a system to try to play the game optimally. As I built on the existing work by other authors (the technical ones only), I found conflicting recommendations for the best starting/seed words. Surely there was something more to optimal play than the seed word! And my hypothesis was that the best seed word depends on how you play the game. The contribution of this post is therefore to test this hypothesis, and show that other components of a Wordle strategy affect what the best seed words are.
 
 ## The Word on Wordle
 Numerous articles have already been written on Wordle, many of which focused on starting (seed) words. Most authors simulated a large number of games to identify seed words that produced the best final outcome in terms of the **average number of steps required to solve the games**. However, not all of them did so, and not all of them had other metrics that measured the performance of their Wordle solvers (see table below).
@@ -16,16 +16,16 @@ Numerous articles have already been written on Wordle, many of which focused on 
 | [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Two words: `cones-trial` | 3.68 | Not provided |
 | [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Three words: `hates-round-climb` | Not provided | Not provided |
 
-Another potential issue with the existing content were the conclusions on what was "best". I observed that different authors have recommended different seed words, but used different approaches to run their simulations. This led to the hypothesis that the other components of a Wordle strategy could be the reason why we saw different recommendations.
+Another potential issue with the existing content were the conclusions on what was "best". I observed that different authors recommended different seed words, but used different approaches to run their simulations. This led to the hypothesis that the other components of a Wordle strategy could be the reason why we saw different recommendations. Yet, none of the abovementioned articles explicitly defined a strategy.
 
 Therefore, building on the literature to test the hypothesis above, we will:
 
-1. Test different configurations of a Wordle strategy on the list of seed words from above i.e. all recommendations
-2. Present more metrics on each Wordle solver's performance
+1. Test different configurations of a Wordle strategy on the list of recommended seed words (see table above)
+2. Present a consistent set of metrics on each Wordle solver's performance
 
 
 ## The Game
-For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in as few steps as possible, and you only have six tries. On each guess, Wordle will tell you if each letter:
+For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in six tries. On each guess, Wordle will tell you if each letter:
 
 - Is in the right spot (green)
 - Is in the word, but the wrong spot (yellow)
@@ -45,22 +45,22 @@ Much like Wheel of Fortune, in Wordle, we balance between **solving** (guessing 
 5. **Round 5: AGAIN, it depends.** We do the same as we did in rounds 3 and 4. But, the balance should lie even more toward solving than collecting information.
 6. **Round 6: 100% Solve.** It's entirely possible that you're still left with several feasible solutions by round 6. If it still isn't clear what the solution is, just hazard a guess! What do you have to lose?
 
-As you can probably see, a strategy is more than just the seed word. It also includes (1) decision rules to prioritise solving vs. collecting information, and (2) a ranking algorithm to choose words.
+As you can probably see, a strategy is more than just the seed word. It also includes (1) decision rules to prioritise solving vs. collecting information, and (2) a way to choose words.
 
 ## A Proposed Wordle Bot
 
 ### Overview
-The Wordle bot I've built follows the same approach. The start state for the bot has (1) a candidate set comprising all 12,972 accepted words, and (2) a solution set comprising all 2,315 solution words. It will repeatedly measure (1) against (2), and update them both in the course of each game. Note how this is inhuman: it has perfect memory of all words, and is able to perfectly distinguish between accepted words and solution words.
+My proposed Wordle bot follows the broad strategy and implements the two other components of the strategy: the decision rules and a ranking algorithm for choosing words.
+
+The bot starts off with (1) a candidate set comprising all 12,972 accepted words, and (2) a solution set comprising all 2,315 solution words. It will repeatedly measure (1) against (2), and update them both in the course of each game. Note how this is inhuman: it has perfect memory of all words, and is able to perfectly distinguish between accepted words and solution words. It is also able to evaluate all possible scenarios (candidate vs. solution) one step ahead to choose the statistically optimal outcome.
 
 The bot moves one step at a time, doing the same things in every step/round:
 
-1. Use a ranking algorithm to calculate scores for all remaining candidates.
-2. Submit the candidate with the best score as the guess for that step.
-3. Use the feedback to (a) filter the candidate set and (b) filter the solution set. We also eliminate candidates that were already guessed, and candidates that contain letters that are no longer present in the remaining solution set, i.e. they have no value for filtering candidates further.
-4. Put the filtered/remaining candidate and solution sets into a ranking algorithm to calculate scores for each remaining candidate.
-5. Sort the remaining candidates by score.
-6. Submit the candidate with the best score as the next guess.
-7. Repeat from step 1 until the feedback from step 2 is `GGGGG`.
+1. Put the filtered/remaining candidate and solution sets into a ranking algorithm to calculate scores for all remaining candidates.
+2. Sort the remaining candidates by score.
+3. Submit the candidate with the best score as the guess for that step.
+4. Use the feedback to (a) filter the candidate set and (b) filter the solution set. We also eliminate candidates that were already guessed, and candidates that contain letters that are no longer present in the remaining solution set, i.e. they have no value for filtering candidates further.
+5. Repeat from step 1 until the feedback from step 4 is `GGGGG`.
 
 I developed a `Wordle` class to facilitate games, simulated or otherwise. As this is not the focus for the post, I will be skipping over the details of its implementation. I mention it only to show how tidy it makes the code for simulating a game with the bot's general logic:
 
@@ -79,27 +79,56 @@ def play_game(input_word, solution):
     return game.records()
 ```
 
-**Note:** The bot does not use brute force to enumerate all possibilities before deciding on all steps.
+**Note:** The bot does not use brute force to enumerate all *game outcomes* before deciding on all steps.
 
 ### Ranking Algorithms
-After much testing, my sense was that the key component of a Wordle strategy was the ranking algorithm (or for humans, the decision process for what word to guess next). We will discuss the evidence for this hypothesis in the next section. My Wordle bot has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey tiles, and (3) expected max number of remaining candidates. Each algorithm computes scores for all remaining candidates with respect to the remaining solutions.
+The ranking algorithm is arguably the most critical component of the strategy because it determines *what* guesses are made. Decision rules only decide *how* guesses are made (solve vs. collect info), and the seed word is a *product* of the ranking algorithm in step 0, before the game starts.
+
+My Wordle bot has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey tiles, and (3) expected max number of remaining candidates. Each algorithm computes scores for all remaining candidates with respect to the remaining solutions.
 
 #### Letter Frequency 
-This algorithm ranks words by how popular its constituent letters are. First, it counts the frequencies of letters for all remaining solutions to produce a lookup table with letters as keys and counts as values. Then, it scores each remaining candidate by taking the sum of frequency scores for the letters in that candidate words. We pick the candidate with the highest score.
+This algorithm ranks words by how popular its constituent letters are:
+
+1. Count the frequencies of letters for all remaining solutions
+2. Create a lookup table of letters to counts 
+3. Score each remaining candidate by taking the sum of frequency scores for the letters in that candidate words
+4. Pick the candidate with the highest score
 
 #### Expected Green/Yellow/Grey Tile Scores
-This algorithm ranks words by the expected information gained, based on the number of green tiles and yellow tiles returned, averaged across all remaining solutions. I called this GYX scores for simplicity, and because of the way I coded grey (`X`) in the feedback for the `Wordle` class. For each remaining candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, and (2) calculates `GYX Score = 2 * No. of Greens + No. of Yellows` for all remaining solutions *if* we had guessed that candidate. This produces a list of `N_s = No. of remaining solutions` scores per candidate. Finally, it (3) averages all the scores to produce a single score for that candidate. We pick the candidate with the highest score, because it is expected to return more information in the form of green and yellow tiles.
+This algorithm ranks words by the expected information gained, based on the number of green tiles and yellow tiles returned, averaged across all remaining solutions. I called this GYX scores for simplicity, and because of the way I coded grey (`X`) in the feedback for the `Wordle` class. For each remaining candidate:
+
+1. Do the following against each remaining solution:
+    1. Calculate the feedback against that solution
+    2. Compute `GYX Score = 2 * No. of Greens + No. of Yellows`
+2. Consolidate the list of GYX scores
+3. Take the average of all scores to produce a single score for that candidate
+
+Finally, pick the candidate with the highest score.
 
 #### Max Number of Remaining Candidates
-This algorithm ranks candidates by how many possibilities they would eliminate / leave behind if guessed, averaged across all remaining solutions. The idea is to choose words that cut the candidate set down the most. For each candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, (2) uses the feedback to filter (a copy of) the remaining candidate set, and (3) counts the resulting number of candidates remaining. That results in a list of `N_s` counts (of remaining candidates) for that candidate. Finally, the algorithm (4) takes the average of all these counts. We pick the candidate with the lowest score, because it eliminates the most possibilities in the worst case.
+This algorithm ranks candidates by how many possibilities they would eliminate / leave behind if guessed, averaged across all remaining solutions. The idea is to choose words that cut the candidate set down the most. For each remaining candidate:
+
+1. Do the following against each remaining solution:
+    1. Calculate the feedback against that solution
+    2. Use the feedback to filter (a copy of) the remaining candidate set
+    3. Count the resulting number of candidates remaining
+2. Consolidate the list of counts
+3. Take the maximum of all counts
+
+Finally, pick the candidate with the lowest score, because it eliminates the most possibilities in the worst case.
 
 ### Decision Rules
-I tested only one decision rule: whenever there were only 10 solutions left, the bot guessed the most popular word. Popularity was measured by word frequencies in Wikipedia articles. This was obtained from [Lexipedia](https://en.lexipedia.org/).
+The baseline decision rule was that we would only guess solutions if there were 20 solutions or fewer remaining. This is in line with our strategy, where we prioritise solving over collecting information as we converge on the solution.
+
+I tested two decision rules that kicked in when there were only 10 solutions left. I chose 10 because it *seemed* like a small-enough number of words to make solving worth the shot (~10% chance). I'm sure there's a better way to choose this number - we'll just have to add this to the set of parameters for further testing in future work.
+
+1. **Current ranking algorithm:** The next guess was selected purely based on the scores from the ranking algorithm.
+2. **Word popularity:** Disregard the ranking algorithm scores and guess the most popular word. Popularity was measured by word frequencies in Wikipedia articles - collected by [Lexipedia](https://en.lexipedia.org/).
 
 
 
 ## Simulations
-I ran each of the words recommended by the various sources from the previous section (see below) against the full set of 2,315 solution words **three times**: once for each ranking algorithm. Overall, that's 17 "best" words by 2,315 solution words by 3 ranking algorithms for a total of **118,065 games of Wordle**.
+I ran each of the words recommended by the various sources from the previous section (see below) against the full set of 2,315 solution words **seven times**. Overall, that's 17 "best" words by 2,315 solution words by 7 strategies for a total of **275,485 games of Wordle**.
 
 ```
 1. arles    10. rates
