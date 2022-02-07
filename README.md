@@ -20,9 +20,8 @@ Another potential issue with the existing content were the conclusions on what w
 
 Therefore, building on the literature to test the hypothesis above, we will:
 
-1. Test different configurations of a Wordle strategy on the list of recommended seed words (see table above)
+1. Test different Wordle strategies on the list of recommended seed words (see table above)
 2. Present a consistent set of metrics on each Wordle solver's performance
-
 
 ## The Game
 For the uninitiated, Wordle is Mastermind for 5-letter words. The aim of the game is to guess an undisclosed word in six tries. On each guess, Wordle will tell you if each letter:
@@ -245,6 +244,8 @@ If we had to force fit a "best" strategy, we could combine the scores. I combine
 
 Of course, these results are based on my implementation of the techniques described above. 
 
-## What Do These Mean?
-If you're a computer, you're in luck. If you're a human, not so much. 
+## What Does It All Mean?
+If you're a computer, you're in luck. You have a stepping stone to design a more powerful algorithm to achieve better overall scores on Wordle.
+
+But, if you're a human, not so much. 
 Just as it would be inappropriate to compare human and computer Wordle players, it is inappropriate to expect that a strategy optimal for a computer is optimal for a human player.
