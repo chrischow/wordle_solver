@@ -1,5 +1,5 @@
 # Wordle2Vec: A Vectorised Approach to Solving Wordle
-Over the past few weeks, I started to see green, yellow, and black/white grids posted on Facebook, but only since last week did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been developing a system to try to play the game optimally.  As I built on the existing work by other authors (the technical ones only), I found conflicting recommendations for the best starting/seed words. My hypothesis was that the best seed word depends on how you play the game. The contribution of this post is therefore to test this hypothesis, and show that other components of a Wordle strategy affect what the best seed words are.
+Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, but only two weeks ago did I start to explore the game of [Wordle](https://www.powerlanguage.co.uk/wordle/) - and I was hooked. I've since been developing a system to try to play the game optimally. As I built on the existing work by other authors (the technical ones only), I found conflicting recommendations for the best starting/seed words. My hypothesis was that the best seed word depends on how you play the game. The contribution of this post is therefore to test this hypothesis, and show that other components of a Wordle strategy affect what the best seed words are.
 
 ## The Word on Wordle
 Numerous articles have already been written on Wordle, many of which focused on starting (seed) words. Most authors simulated a large number of games to identify seed words that produced the best final outcome in terms of the **average number of steps required to solve the games**. However, not all of them did so, and not all of them had other metrics that measured the performance of their Wordle solvers (see table below).
@@ -16,7 +16,7 @@ Numerous articles have already been written on Wordle, many of which focused on 
 | [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Two words: `cones-trial` | 3.68 | Not provided |
 | [Barry Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) | Selection of minimum set covers using entropy, letter frequencies, and coverage | Three words: `hates-round-climb` | Not provided | Not provided |
 
-Another potential issue with the existing content were the conclusions on what was "best". I observed that different authors have recommended different seed words, but used different approaches to run their simulations. This led to the hypothesis that the other components of a Wordle strategy could be the reason why we saw different recommended seed words.
+Another potential issue with the existing content were the conclusions on what was "best". I observed that different authors have recommended different seed words, but used different approaches to run their simulations. This led to the hypothesis that the other components of a Wordle strategy could be the reason why we saw different recommendations.
 
 Therefore, building on the literature to test the hypothesis above, we will:
 
@@ -79,22 +79,24 @@ def play_game(input_word, solution):
     return game.records()
 ```
 
-**Note:** It does not use brute force to enumerate all possibilities before deciding on all steps.
+**Note:** The bot does not use brute force to enumerate all possibilities before deciding on all steps.
 
 ### Ranking Algorithms
-After much testing, my sense is that the key component of a Wordle strategy is the ranking algorithm (or for humans, the decision process for what word to guess next). We will discuss the evidence for this hypothesis in the next section. My Wordle bot has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey (I term it GYX for simplicity) scores, and (3) max number of remaining candidates. Each algorithm computes scores for all remaining candidates with respect to the remaining solutions.
+After much testing, my sense was that the key component of a Wordle strategy was the ranking algorithm (or for humans, the decision process for what word to guess next). We will discuss the evidence for this hypothesis in the next section. My Wordle bot has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey tiles, and (3) expected max number of remaining candidates. Each algorithm computes scores for all remaining candidates with respect to the remaining solutions.
 
 #### Letter Frequency 
-This algorithm ranks words by how popular its constituent letters are. First, it counts the frequencies of letters for all remaining solutions to produce a lookup table with letters as keys and counts as values. Then, it scores each remaining candidate by taking the sum of frequency scores for the letters in that candidate words. Pick the candidate with the highest score.
+This algorithm ranks words by how popular its constituent letters are. First, it counts the frequencies of letters for all remaining solutions to produce a lookup table with letters as keys and counts as values. Then, it scores each remaining candidate by taking the sum of frequency scores for the letters in that candidate words. We pick the candidate with the highest score.
 
 #### Expected Green/Yellow/Grey Tile Scores
-This algorithm ranks words by the expected information gained, based on the number of green tiles and yellow tiles returned, averaged across all remaining solutions. I called this GYX scores for simplicity, and because of the way I coded grey (`X`) in the feedback for the `Wordle` class. For each remaining candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, and (2) calculates `GYX Score = 2 * No. of Greens + No. of Yellows` for each feedback. This produces a list of `N_s = No. of remaining solutions` scores per candidate. Finally, it (3) averages all the scores to produce a single score for that candidate. Pick the candidate with the highest score, because it is expected to return more information in the form of green and yellow tiles.
+This algorithm ranks words by the expected information gained, based on the number of green tiles and yellow tiles returned, averaged across all remaining solutions. I called this GYX scores for simplicity, and because of the way I coded grey (`X`) in the feedback for the `Wordle` class. For each remaining candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, and (2) calculates `GYX Score = 2 * No. of Greens + No. of Yellows` for all remaining solutions *if* we had guessed that candidate. This produces a list of `N_s = No. of remaining solutions` scores per candidate. Finally, it (3) averages all the scores to produce a single score for that candidate. We pick the candidate with the highest score, because it is expected to return more information in the form of green and yellow tiles.
 
 #### Max Number of Remaining Candidates
-This algorithm ranks candidates by how many possibilities they would eliminate / leave behind if guessed, averaged across all remaining solutions. The idea is to choose words that cut the candidate set down the most. For each candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, (2) uses the feedback to filter (a copy of) the remaining candidate set, and (3) counts the number of remaining candidates. That results in a list of `N_s` counts (of remaining candidates) for that candidate. Finally, the algorithm (4) takes the average of all these counts. Pick the candidate with the lowest score, because it eliminates the most possibilities in the worst case.
+This algorithm ranks candidates by how many possibilities they would eliminate / leave behind if guessed, averaged across all remaining solutions. The idea is to choose words that cut the candidate set down the most. For each candidate, the algorithm (1) calculates the feedback from guessing that word against each remaining solution, (2) uses the feedback to filter (a copy of) the remaining candidate set, and (3) counts the resulting number of candidates remaining. That results in a list of `N_s` counts (of remaining candidates) for that candidate. Finally, the algorithm (4) takes the average of all these counts. We pick the candidate with the lowest score, because it eliminates the most possibilities in the worst case.
 
 ### Decision Rules
-Through some other tests, I discovered some rules that led to improvements in the strategies. However, in view of the amount of content already covered in this post, I'll save these insights for a follow-up post.
+I tested only one decision rule: whenever there were only 10 solutions left, the bot guessed the most popular word. Popularity was measured by word frequencies in Wikipedia articles. This was obtained from [Lexipedia](https://en.lexipedia.org/).
+
+
 
 ## Simulations
 I ran each of the words recommended by the various sources from the previous section (see below) against the full set of 2,315 solution words **three times**: once for each ranking algorithm. Overall, that's 17 "best" words by 2,315 solution words by 3 ranking algorithms for a total of **118,065 games of Wordle**.
@@ -117,7 +119,7 @@ To allow other authors to make comparisons to the strategies tested, I identifie
 2. Solution success rate (out of 2,315 challenges)
 3. The proportion of challenges solved within 3 steps or less
 
-To generate these metrics and perform diagnosis on the strategies, I logged the results from each step from the simulations, including (1) the candidates guessed, (2) the feedback, and (3) the number of candidates remaining after each step.
+To generate these metrics and perform diagnoses on the strategies, I logged the results from each step from the simulations, including (1) the candidates guessed, (2) the feedback, and (3) the number of candidates remaining after each step.
 
 ### Results
 Overall, the results showed that:
