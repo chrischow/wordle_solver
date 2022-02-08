@@ -110,11 +110,6 @@ This post addresses these gaps. First, we show that some seed words are *better*
 ### TL;DR
 1. 
 
-## Limitation: For Bots, By Bots
-Before we go any further, I'd like to state the main limitation on the study and others like it upfront. The recommended strategies, be it just seed words or full-fledged ones, are tailored for solving Wordle with bots, not limited human cognitive abilities. Like all studies referenced above, this one leverages bots, which have perfect information on the solution space and the computing power to evaluate a big chunk of it. It's just not possible for a human to do the same. 
-
-Even though a human could simply take the recommended seed word, we'll show that 
-
 ## The Game
 For the uninitiated, Wordle is Mastermind for 5-letter words, plus some humblebragging on social media. The aim of the game is to guess an undisclosed word in six tries. On each guess, Wordle will tell you if each letter:
 
@@ -136,7 +131,7 @@ Much like Wheel of Fortune, in Wordle, we balance between **solving** (guessing 
 5. **Round 5: AGAIN, it depends.** We do the same as we did in rounds 3 and 4. But, the balance should lie even more toward solving than collecting information.
 6. **Round 6: 100% Solve.** It's entirely possible that you're still left with several feasible solutions by round 6. If it still isn't clear what the solution is, just hazard a guess! What do you have to lose?
 
-As you can probably see, a strategy is more than just the seed word. It also includes (1) decision rules to prioritise solving vs. collecting information, and (2) a way to choose words.
+We can see that a strategy is more than just the seed word. It also includes (1) decision rules to prioritise solving vs. collecting information, and (2) a way to choose words.
 
 > **Note:** We can actually remove seed words as a strategy component altogether if we apply the ranking algorithm in step 0 to the entire set of candidates to rank them.
 
@@ -153,7 +148,7 @@ The bot starts off with (1) a candidate set comprising all 12,972 accepted words
 4. Use the feedback to (a) filter the candidate set and (b) filter the solution set. We also eliminate candidates that were already guessed, and candidates that contain letters that are no longer present in the remaining solution set, i.e. they have no value for filtering candidates further.
 5. Repeat from step 1 until the feedback from step 4 is `GGGGG`.
 
-I developed a `Wordle` class to facilitate games, simulated or otherwise. As this is not the focus for the post, I will be skipping over the details of its implementation. You can access the full code at my [GitHub repo](https://github.com/chrischow/wordle_solver).I mention it only to show how tidy it makes the code for simulating a game with the bot's general logic:
+I developed a `Wordle` class to facilitate games, simulated or otherwise. As this is not the focus for the post, I will be skipping over the details of its implementation. You can access the full code at my [GitHub repo](https://github.com/chrischow/wordle_solver). I mention the class only to highlight that this is what facilitates simulations. We still have to write some logic ourselves.
 
 ```py
 def play_game(input_word, solution):
@@ -186,7 +181,7 @@ This algorithm ranks words by how popular its constituent letters are:
 4. Pick the candidate with the highest score
 
 <figure align="center">
-    <img src="images/exp_lf.png">
+    <img src="images/exp_lf.jpg">
     <figcaption>Letter frequency scores. Image by author. </figcaption>
 </figure>
 
@@ -224,12 +219,12 @@ Finally, pick the candidate with the lowest score, because it eliminates the mos
 </figure>
 
 ### Decision Rules
-The baseline decision rule was that we would only guess solutions if there were 20 solutions or fewer remaining. This is in line with our strategy, where we prioritise solving over collecting information as we converge on the solution.
+The baseline decision rule was that we would only guess solution words if there were 20 solutions or fewer remaining. This is in line with our strategy, where we prioritise solving over collecting information as we converge on the solution.
 
-The only other optional decision rule tested was to choose words purely by popularity. Popularity was measured by word frequencies in Wikipedia articles - collected by [Lexipedia](https://en.lexipedia.org/). The rule kicked in when there were only 10 solutions left, and was **slapped on top of the baseline rule**. I chose a threshold of 10 remaining solutions to simulate increasing emphasis on solving. I'm sure there's a better way to choose this number - we'll just have to add this to the set of parameters for further testing in future work.
+The only other optional decision rule tested was to choose words purely by popularity. Popularity was measured by word frequencies in Wikipedia articles - collected by [Lexipedia](https://en.lexipedia.org/). The rule kicked in when there were only 10 solutions left, and was **slapped on top of the baseline rule**. I chose a threshold of 10 remaining solutions arbitrarily, though I'm sure there's a better way to choose this number - we'll just have to add this to the set of parameters for further testing in future work.
 
 ## Simulations
-I ran each of the words recommended by the various sources from the previous section (see below) against the full set of 2,315 solution words **5 times** - one per combination of ranking algorithms and decision rules:
+I ran each of the words recommended by the various sources from the previous section (see below) against the full set of 2,315 solution words **5 times** - one per combination of ranking algos and decision rules:
 
 Seed words:
 
@@ -245,23 +240,29 @@ Seed words:
 9. rales
 ```
 
-| Strategy | Ranking Algorithm | Decision Rule |
-| :------: | :---------------- | :------------ |
-| 1        | Letter Frequencies | Baseline only |
-| 2        | Letter Frequencies | Baseline + Popularity |
-| 3        | GYX Scores | Baseline only |
-| 4        | GYX Scores | Baseline + Popularity |
-| 5        | Max No. of Candidates | Baseline only |
+Ranking algo and decision rule:
 
-Overall, that's 17 "best" words by 2,315 solution words by 5 strategies for a total of **196,775 games of Wordle**.
+| Configuration | Ranking Algorithm | Decision Rule |
+| :-----------: | :---------------- | :------------ |
+| 1             | Letter Frequencies (`lf`) | Baseline only |
+| 2             | Letter Frequencies (`lf`) | Baseline + Popularity |
+| 3             | GYX Scores (`gyx`) | Baseline only |
+| 4             | GYX Scores (`gyx`) | Baseline + Popularity |
+| 5             | Max Remaining Candidates (`ncands`) | Baseline only |
 
-To allow other authors to make comparisons to the strategies tested, I identified three metrics to measure every strategy (seed word + ranking algorithm + decision rules):
+Overall, that's 17 "best" words by 5 strategies by 2,315 solution words for a total of **196,775 games of Wordle**.
 
-1. Average number of steps taken to solve the challenge - a measure of strategy performance in terms of steps
-2. Solution success rate (out of 2,315 challenges) - a measure of strategy performance in terms of solved problems
-3. The proportion of challenges solved within 3 steps or less - a measure of street cred from solving games fast
+### Metrics
+We now jump ahead to the proposed metrics before discussing the simulation results. To allow other authors to make comparisons to the strategies tested, I identified three metrics to measure every strategy (seed word + ranking algo + decision rules):
 
-To generate these metrics and perform diagnoses on the strategies, I logged the results from each step from the simulations, including (1) the candidates guessed, (2) the feedback, and (3) the number of candidates remaining after each step. See below for a sample:
+1. Average number of steps taken to reach a solution
+2. Solution success rate
+3. The proportion of challenges solved within 3 steps or less
+
+Jointly, these metrics tell us (1) how good the strategy was overall in terms of steps, (2) what proportion of the 2,315 solution words it could solve, and (3) how much street cred the bot has because of its ability to solve challenges in as few steps as possible.
+
+### Game Logs
+To generate these metrics and perform diagnoses on the simulations, we propose logging the detailed actions and outcomes from the simulations. These include (1) the candidate words guessed at each step, (2) the feedback obtained at each step, (3) the number of candidates remaining after each step, (4) the overall number of steps taken, and (5) metadata about the simulation run - what strategy was used (seed word, algo) and what the solution was for the run. See below for a sample:
 
 ```
 {
@@ -278,17 +279,23 @@ To generate these metrics and perform diagnoses on the strategies, I logged the 
 ## Results
 
 ### Overall
-Overall, the results showed that the "best" seed word depended on (1) the other strategy components - especially the ranking algorithm - and (2) the performance metric used. Here were the rank-1 seed words for the respective strategy settings and metrics:
+Overall, the results showed that the "best" seed word depended on (1) the other strategy components - especially the ranking algo - and (2) the performance metric used. Here were the rank-1 seed words for the respective strategy settings and metrics:
 
 | Ranking Algorithm | Mean No. of Steps | Success Rate | % Solved Within 3 Steps |
-| :---------------: | :---------------: | :----------: | :---------------------: |
-| Max No. of Candidates | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.6017 | <code style="background-color:#120c6e; color: white;">tares</code> - 99.78% | <code style="background-color:#ff5364; color: white;">raile</code> - 48.12% | 
-| Letter Frequencies | <code style="background-color:#7b73f0; color: white;">stare</code> - 3.7287 | <code style="background-color:#27ddcb; color: black;">tales</code> - 99.44% | <code style="background-color:#ffbac1; color: black;">arose</code> - 42.98% |
-| Letter Frequencies + Popularity | <code style="background-color:#333f50; color: white;">tores</code> - 3.7702 | <code style="background-color:#333f50; color: white;">tores</code> - 99.22% | <code style="background-color:#ffbac1; color: black;">arose</code> - 42.33% |
-| GYX Scores | <code style="background-color:#7b73f0; color: white;">stare</code> - 3.8320 | <code style="background-color:#27ddcb; color: black;">tales</code> - 99.09% | <code style="background-color:#F6DC75; color: black;">roate</code> - 38.57% |
-| GYX Scores + Popularity | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.8898 | <code style="background-color:#27ddcb; color: black;">tales</code> - 98.79% | <code style="background-color:#F6DC75; color: black;">roate</code> - 37.93% |
+| :---------------- | :---------------: | :----------: | :---------------------: |
+| Max Remaining Candidates (`ncands`) | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.6017 | <code style="background-color:#120c6e; color: white;">tares</code> - 99.78% | <code style="background-color:#ff5364; color: white;">raile</code> - 48.12% | 
+| Letter Frequencies (`lf`) | <code style="background-color:#7b73f0; color: white;">stare</code> - 3.7287 | <code style="background-color:#27ddcb; color: black;">tales</code> - 99.44% | <code style="background-color:#ffbac1; color: black;">arose</code> - 42.98% |
+| Letter Frequencies + Popularity (`lf-pop`) | <code style="background-color:#333f50; color: white;">tores</code> - 3.7702 | <code style="background-color:#333f50; color: white;">tores</code> - 99.22% | <code style="background-color:#ffbac1; color: black;">arose</code> - 42.33% |
+| GYX Scores (`gyx`) | <code style="background-color:#7b73f0; color: white;">stare</code> - 3.8320 | <code style="background-color:#27ddcb; color: black;">tales</code> - 99.09% | <code style="background-color:#F6DC75; color: black;">roate</code> - 38.57% |
+| GYX Scores + Popularity (`gyx-pop`) | <code style="background-color:#27ddcb; color: black;">tales</code> - 3.8898 | <code style="background-color:#27ddcb; color: black;">tales</code> - 98.79% | <code style="background-color:#F6DC75; color: black;">roate</code> - 37.93% |
 
-From the boxplots below, we can see big differences in the distribution of metrics acros the various ranking algorithm vs. decision rule combinations. We also see that the ranks of the "best" seed words change depending on which ranking algo / decision rule / metric we use.
+Below, I plotted the scores for each metric, for each of the 17 "best" seed words, for each ranking alogrithm-decision rule combination. I also highlighted the scores and progression for `tales`, `raile`, and `tares`, which were among the top words based on a composite measure of the three metrics we identified (see next subsection).
+
+First, we notice that the biggest impact on performance was the **ranking algo-decision rule configuration**. Two clear examples of this were (1) GYX scores + popularity vs. letter frequencies and (2) letter frequencies vs. max remaining candidates. In both these examples, all of the seed words using the latter configuration performed better than the best seed word in the former. And this means that using a "lousy" seed word can still result in good performance if you use a good ranking algo / decision rule.
+
+Second, we see that the "best" seed words changed ranks across the ranking algo-decision rule configurations. This was more obvious for some than others. For example, `raile` (red) was ranked 13th under the GYX Scores algo, but jumped all the way up to 2nd under the Max Remaining Candidates algo. `tales` (green) ranked within the top two for the GYX Scores and Max Remaining Candidates algos, but ranked 7-8th for the Letter Frequencies algo. This gives us reason to believe that if different algos or variants of these algos were used, we can expect the "best" seed word to change.
+
+Third, the "best" seed words were not the best for all metrics. In fact, each metric had a different optimal *strategy*. There were, however, good 
 
 <figure align="center">
     <img src="results/strat_mean_steps.png">
@@ -306,50 +313,59 @@ From the boxplots below, we can see big differences in the distribution of metri
 </figure>
 
 ### The Best Strategies (So Far)
-If you're just here for the best strategies, here they are. All of them involved the **Max No. of Candidates** ranking algorithm and **Baseline** decision rule. The top strategies by the **average number of steps to reach a solution** were:
+Next, we zoom in on the top 5 strategies for each metric. All of them involved the **Max Remaining Candidates** ranking algo and **Baseline** decision rule. The top strategies based on the **average number of steps to reach a solution** metric were:
 
 | Rank | Seed Word | Ranking Algo | Decision Rule | Mean No. of Steps |
 | :--: | :-------: | :----------: | :-----------: | :---------------: |
-| 1    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline | 3.6017 | 
-| 2    | <code style="background-color:#ff5364; color: white;">raile</code> | Max No. of Candidates | Baseline | 3.6069 |
-| 3    | <code style="background-color:#7b73f0; color: white;">stare</code> | Max No. of Candidates | Baseline | 3.6112 |
-| 4    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max No. of Candidates | Baseline | 3.6117 |
-| 5    | <code style="background-color:#120c6e; color: white;">tares</code> | Max No. of Candidates | Baseline | 3.6121 |
+| 1    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max Remaining Candidates | Baseline | 3.6017 | 
+| 2    | <code style="background-color:#ff5364; color: white;">raile</code> | Max Remaining Candidates | Baseline | 3.6069 |
+| 3    | <code style="background-color:#7b73f0; color: white;">stare</code> | Max Remaining Candidates | Baseline | 3.6112 |
+| 4    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max Remaining Candidates | Baseline | 3.6117 |
+| 5    | <code style="background-color:#120c6e; color: white;">tares</code> | Max Remaining Candidates | Baseline | 3.6121 |
 
 The top strategies by **solution success rate** were close. The difference between ranks 1 to 2 and 2 to 3 were 0.0432%, which was in fact 1 out of 2,315 solutions.
 
 | Rank | Seed Word | Ranking Algo | Decision Rule | Success Rate | Lead Over Next Rank |
 | :--: | :-------: | :----------: | :-----------: | :----------: | :-----------------: |
-| 1    | <code style="background-color:#120c6e; color: white;">tares</code> | Max No. of Candidates | Baseline | 99.78% | 1 word |
-| 2    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline | 99.74% | 1 word |
-| 3    | <code style="background-color:#333f50; color: white;">tores</code> | Max No. of Candidates | Baseline | 99.70% | - |
-| 3    | <code style="background-color:#8490b7; color: white;">arles</code> | Max No. of Candidates | Baseline | 99.70% | - |
-| 3    | <code style="background-color:#8497b0; color: white;">rales</code> | Max No. of Candidates | Baseline | 99.70% | 1 word |
+| 1    | <code style="background-color:#120c6e; color: white;">tares</code> | Max Remaining Candidates | Baseline | 99.78% | 1 word |
+| 2    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max Remaining Candidates | Baseline | 99.74% | 1 word |
+| 3    | <code style="background-color:#333f50; color: white;">tores</code> | Max Remaining Candidates | Baseline | 99.70% | - |
+| 3    | <code style="background-color:#8490b7; color: white;">arles</code> | Max Remaining Candidates | Baseline | 99.70% | - |
+| 3    | <code style="background-color:#8497b0; color: white;">rales</code> | Max Remaining Candidates | Baseline | 99.70% | 1 word |
 
 
 The top strategies by **proportion of challenges solved within 3 steps or less** were:
 
 | Rank | Seed Word | Ranking Algo | Decision Rule | % Solved in 3 Steps | Lead Over Next Rank |
 | :--: | :-------: | :----------: | :-----------: | :---------------------: | :-----------------: |
-| 1    | <code style="background-color:#ff5364; color: white;">raile</code> | Max No. of Candidates | Baseline |  48.12% | 11 words |
-| 2    | <code style="background-color:#120c6e; color: white;">roate</code> | Max No. of Candidates | Baseline |  47.65% | 12 words |
-| 3    | <code style="background-color:#7b73f0; color: white;">stare</code> | Max No. of Candidates | Baseline |  47.13% | 3 words |
-| 4    | <code style="background-color:#8497b0; color: white;">soare</code> | Max No. of Candidates | Baseline |  47.00% | 6 words |
-| 5    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline |  46.74% | 12 words |
+| 1    | <code style="background-color:#ff5364; color: white;">raile</code> | Max Remaining Candidates | Baseline |  48.12% | 11 words |
+| 2    | <code style="background-color:#120c6e; color: white;">roate</code> | Max Remaining Candidates | Baseline |  47.65% | 12 words |
+| 3    | <code style="background-color:#7b73f0; color: white;">stare</code> | Max Remaining Candidates | Baseline |  47.13% | 3 words |
+| 4    | <code style="background-color:#8497b0; color: white;">soare</code> | Max Remaining Candidates | Baseline |  47.00% | 6 words |
+| 5    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max Remaining Candidates | Baseline |  46.74% | 12 words |
 
 If we had to force fit a "best" strategy, we could combine the scores. I combined the metrics by scaling each one to the range `[0, 1]` and taking the average. The "top" strategies based on this **composite score** were:
 
 | Rank | Seed Word | Ranking Algo | Decision Rule | Composite Score |
 | :--: | :-------: | :----------: | :-----------: | :-------------: |
-| 1    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max No. of Candidates | Baseline | 96.53% |
-| 2    | <code style="background-color:#ff5364; color: white;">raile</code> | Max No. of Candidates | Baseline | 95.97% |
-| 3    | <code style="background-color:#120c6e; color: white;">tares</code> | Max No. of Candidates | Baseline | 93.92% |
-| 4    | <code style="background-color:#333f50; color: white;">tores</code> | Max No. of Candidates | Baseline | 93.62% |
-| 5    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max No. of Candidates | Baseline | 93.40% |
+| 1    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max Remaining Candidates | Baseline | 96.53% |
+| 2    | <code style="background-color:#ff5364; color: white;">raile</code> | Max Remaining Candidates | Baseline | 95.97% |
+| 3    | <code style="background-color:#120c6e; color: white;">tares</code> | Max Remaining Candidates | Baseline | 93.92% |
+| 4    | <code style="background-color:#333f50; color: white;">tores</code> | Max Remaining Candidates | Baseline | 93.62% |
+| 5    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max Remaining Candidates | Baseline | 93.40% |
 
-Of course, these results are based on my implementation of the techniques described above. 
 
 ## What Does It All Mean?
+As you can probably tell, it isn't easy running the ranking algos and decision rules by hand, or keeping track of all candidates and solutions. If you happen to be able to do these things: hit me up - I need more computing power. More seriously: **the findings from this post and other studies that use similar ranking algos are meant for you**. This is because the tested strategies are designed for solving Wordle with computers, not with limited human cognitive abilities. Bots have perfect information on the solution space and the computing power to evaluate a big chunk of it. It's just not possible for a human to do the same. Hopefully, the strategies in this post can be used as a base to build better bots as measured by the proposed metrics. If not, at least we've tested configurations that didn't work as well.
+
+If, however, you're human like the rest of us, then clearly you can't do all these computations on the fly as you play Wordle. Therefore, **take "best word" recommendations from this post and studies like this with a pinch of salt**. If you don't play Wordle like a bot optimised with some ranking algo and decision rules, the optimal seed words may be different. Until there are studies that use more human strategies, 
+
+
+Even though a human could simply take the recommended seed word, we'll show that 
+
+First, the optimal seed word depends a lot on the way you play the game after the first round. Therefore, recommended seed words from any 
+
+
 If you're a computer, you're in luck. You have a stepping stone to design a more powerful algorithm to achieve better overall scores on Wordle.
 
 But, if you're a human, not so much. 
