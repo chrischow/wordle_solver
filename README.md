@@ -1,103 +1,94 @@
 # Solving Wordle
-Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, and that's when I discovered [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - not so much in playing the game the human way, but by developing a system to try to play optimally. As I read up on existing work by other authors, I found an overwhelming emphasis on starting/seed words. Yet, there were conflicting recommendations for the best ones to use. 
+Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, and that's when I discovered [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - not so much in playing the game the human way, but in developing a system to try to play optimally. As I read up on existing work by other authors, I found an overwhelming emphasis on starting/seed words. Yet, there were conflicting recommendations for the best ones to use. 
 There was clearly more to optimal play than the seed word! The key contribution of this post is to show that other components of a Wordle strategy affect what the best seed words are.
 
 ## The Word on Wordle
 Numerous articles have been written on the subject. Most authors used simulation to find the optimal starting/seed words, while fixing other parameters (more on this later). The recommended seed words were based on final game outcomes. I imagine that they focused on seed words in an effort to make the findings relevant and easy to digest for their readers. The table below summarises each author's general approach and recommendations.
 
-<style>
-    td.center {
-        text-align: center;
-    }
-
-    th.center{
-        text-align: center;
-    }
-</style>
 
 <table>
     <thead>
-        <th class="center">Source</th>
-        <th class="center">Ranking Algorithm</th>
-        <th class="center">Recommended Seed Word</th>
-        <th class="center">Average No. of Steps</th>
-        <th class="center">Success Rate</th>
+        <th style="text-align: center;">Source</th>
+        <th style="text-align: center;">Ranking Algorithm</th>
+        <th style="text-align: center;">Recommended Seed Word</th>
+        <th style="text-align: center;">Average No. of Steps</th>
+        <th style="text-align: center;">Success Rate</th>
     </thead>
     <tbody>
         <tr>
-            <td class="center" rowspan=3><a href="https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb" target="_blank">Barry Smyth</td>
+            <td style="text-align: center;" rowspan=3><a href="https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb" target="_blank">Barry Smyth</td>
             <td rowspan=3>Minimum set covers, coverage, entropy, and letter frequencies</td>
             <td><code>tales</code></td>
-            <td class="center">3.66</td>
-            <td class="center">>95%</td>
+            <td style="text-align: center;">3.66</td>
+            <td style="text-align: center;">>95%</td>
         </tr>
         <tr>
             <td>Two words: <code>cones-trial</code></td>
-            <td class="center">3.68</td>
-            <td class="center">96%</td>
+            <td style="text-align: center;">3.68</td>
+            <td style="text-align: center;">96%</td>
         </tr>
         <tr>
             <td>Three words: <code>hates-round-climb</code></td>
-            <td class="center">3.68</td>
-            <td class="center">96%</td>
+            <td style="text-align: center;">3.68</td>
+            <td style="text-align: center;">96%</td>
         </tr>
         <tr>
-            <td class="center" rowspan=3><a href="https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a" target="_blank">Tyler Glaiel</td>
+            <td style="text-align: center;" rowspan=3><a href="https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a" target="_blank">Tyler Glaiel</td>
             <td rowspan=2>Expected remaining candidates</td>
             <td><code>roate</code></td>
-            <td class="center">3.494</td>
-            <td class="center">100%</td>
+            <td style="text-align: center;">3.494</td>
+            <td style="text-align: center;">100%</td>
         </tr>
         <tr>
             <td><code>raise</code></td>
-            <td class="center">3.495</td>
-            <td class="center">Not Provided</td>
+            <td style="text-align: center;">3.495</td>
+            <td style="text-align: center;">Not Provided</td>
         </tr>
         <tr>
             <td>Expected green / yellow / grey tile scores</td>
             <td><code>soare</code></td>
-            <td class="center">3.69</td>
-            <td class="center">Not Provided</td>
+            <td style="text-align: center;">3.69</td>
+            <td style="text-align: center;">Not Provided</td>
         </tr>
         <tr>
-            <td class="center"><a href="https://notfunatparties.substack.com/p/wordle-solver" target="_blank">Tom Neill</td>
+            <td style="text-align: center;"><a href="https://notfunatparties.substack.com/p/wordle-solver" target="_blank">Tom Neill</td>
             <td>Expected remaining candidates</td>
             <td><code>roate</code></td>
-            <td class="center">Not Provided</td>
-            <td class="center">Not Provided</td>
+            <td style="text-align: center;">Not Provided</td>
+            <td style="text-align: center;">Not Provided</td>
         </tr>
         <tr>
-            <td class="center"><a href="https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723" target="_blank">Sejal Dua</td>
+            <td style="text-align: center;"><a href="https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723" target="_blank">Sejal Dua</td>
             <td>Average green / yellow / grey tile scores</td>
             <td>
                 <code>soare</code>, <code>stare</code>, <code>roate</code>, <code>raile</code>, <code>arose</code>
             </td>
-            <td class="center">N.A.</td>
-            <td class="center">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
         </tr>
         <tr>
-            <td class="center"><a href="https://towardsdatascience.com/a-frequency-analysis-on-wordle-9c5778283363" target="_blank">Behrouz Bakhtiari</td>
+            <td style="text-align: center;"><a href="https://towardsdatascience.com/a-frequency-analysis-on-wordle-9c5778283363" target="_blank">Behrouz Bakhtiari</td>
             <td>Letter frequencies</td>
             <td><code>aries</code></td>
-            <td class="center">N.A.</td>
-            <td class="center">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
         </tr>
         <tr>
-            <td class="center"><a href="https://towardsdatascience.com/optimal-wordle-d8c2f2805704" target="_blank">John Stechschulte</td>
+            <td style="text-align: center;"><a href="https://towardsdatascience.com/optimal-wordle-d8c2f2805704" target="_blank">John Stechschulte</td>
             <td>Information entropy for expected green / yellow scores</td>
             <td>
                 <code>tares</code>, <code>lares</code>, <code>rales</code>, <code>rates</code>, <code>nares</code>, <code>tales</code>, <code>tores</code>, <code>reais</code>,
                 <code>dares</code>, <code>arles</code>, <code>lores</code>
             </td>
-            <td class="center">N.A.</td>
-            <td class="center">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
         </tr>
         <tr>
-            <td class="center"><a href="https://markmliu.medium.com/what-in-the-wordle-5dc5ed94fe2" target="_blank">Mark M Liu</td>
+            <td style="text-align: center;"><a href="https://markmliu.medium.com/what-in-the-wordle-5dc5ed94fe2" target="_blank">Mark M Liu</td>
             <td>Information entropy  for expected green / yellow scores</td>
             <td><code>tares</code></td>
-            <td class="center">N.A.</td>
-            <td class="center">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
         </tr>
     <tbody>
 </table>
