@@ -1,9 +1,9 @@
-# Solving Wordle
+# Lost for Words: Why the "Best" Wordle Seed Words Aren't Really the Best
 Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, and that's when I discovered [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - not so much in playing the game the human way, but in developing a system to try to play optimally. As I read up on existing work by other authors, I found an overwhelming emphasis on starting/seed words. Yet, there were conflicting recommendations for the best ones to use. 
-There was clearly more to optimal play than the seed word! The key contribution of this post is to show that other components of a Wordle strategy affect what the best seed words are.
+There was clearly more to optimal play than the seed word! The key contribution of this post is to explain why we ought to take "best" Wordle seed words with a pinch of salt, by showing that other components of a Wordle strategy affect what the best seed words are.
 
 ## The Word on Wordle
-Numerous articles have been written on the subject. Most authors used simulation to find the optimal starting/seed words, while fixing other parameters (more on this later). The recommended seed words were based on final game outcomes. I imagine that they focused on seed words in an effort to make the findings relevant and easy to digest for their readers. The table below summarises each author's general approach and recommendations.
+Numerous articles have been written on the subject. Most authors used simulation to find the optimal starting/seed words, while fixing other parameters (more on this later). Some of the recommended seed words were based on final game outcomes, others on algorithms to compute the expected information gain. I imagine that these authors focused on seed words in an effort to make the findings relevant and easy to digest for their readers. The table below summarises each author's general approach and recommendations.
 
 
 <table>
@@ -94,12 +94,9 @@ Numerous articles have been written on the subject. Most authors used simulation
 </table>
 
 ## Why Read On?
-Wordle is a relatively recent game, and covering the entire solution space requires a great deal of effort and computing power. Therefore, there are numerous ideas left to explore and issues to address. The first issue is that optimal play is a little more complex than just seed words, as some of the more complete studies (mainly Smyth) have hinted. The second issue is that there were varying definitions of "best", and not all studies included sufficient metrics to measure the strategies' performance.
+Wordle is a relatively recent game, and covering the entire solution space requires a great deal of effort and computing power. Therefore, there are numerous ideas left to explore and issues to address. The first issue is that optimal play is a little more complex than just seed words, as some of the more complete studies (mainly [Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb)) have hinted. The second issue is that there were varying definitions of "best", and not all studies included sufficient metrics to measure the strategies' performance.
 
-This post addresses these gaps. First, we show that some seed words are *better* than others overall, but what is "best" depends on the other components of a Wordle strategy and the metrics used. We simulate games while doing the opposite of what most authors have done: we fix the seed words as those recommended by various authors (see table above), and vary the other components of a Wordle strategy. Second, we introduce several metrics and logging parameters to measure performance. This makes it easier to compare performance across different strategies.
-
-### TL;DR
-1. 
+This post attempts to address these gaps. First, we show that some seed words are *better* than others overall, but what is "best" depends on the other components of a Wordle strategy and the metrics used. We simulate games while doing the opposite of what most authors have done: we fix the seed words as those recommended by various authors (see table above), and vary the other components of a Wordle strategy. Second, we introduce several metrics and logging parameters to measure performance. This makes it easier to compare and analyse different strategies.
 
 ## The Game
 For the uninitiated, Wordle is Mastermind for 5-letter words, plus some humblebragging on social media. The aim of the game is to guess an undisclosed word in six tries. On each guess, Wordle will tell you if each letter:
@@ -126,7 +123,7 @@ We can see that a strategy is more than just the seed word. It also includes (1)
 
 > **Note:** We can actually remove seed words as a strategy component altogether if we apply the ranking algorithm in step 0 to the entire set of candidates to rank them.
 
-## A Simple Wordle Bot
+## A Wordle Bot
 
 ### Overview
 My Wordle bot follows the broad strategy and implements the two other components of the strategy: the decision rules and a ranking algorithm for choosing words.
@@ -159,7 +156,7 @@ def play_game(input_word, solution):
 **Note:** The bot does not use brute force to enumerate all game *outcomes* before deciding on all steps. That is way too computationally intensive.
 
 ### Ranking Algorithms
-The ranking algorithm is arguably the most critical component of the strategy because it determines *what* guesses are made. Decision rules only decide *how* guesses are made (solve vs. collect info), and the seed word is a *product* of the ranking algorithm in step 0, before the game starts.
+The ranking algorithm is arguably the most critical component of the strategy because it determines what guesses are available. Decision rules only decide among the available guesses provided by the algorithm, and the seed word is a *product* of the ranking algorithm in step 0, before the game starts.
 
 My Wordle bot has several built-in options: (1) letter frequency, (2) expected green, yellow, and grey tiles, and (3) expected max number of remaining candidates. Each algorithm computes scores for all remaining candidates with respect to the remaining solutions.
 
@@ -282,11 +279,11 @@ Overall, the results showed that the "best" seed word depended on (1) the other 
 
 Below, I plotted the scores for each metric, for each of the 17 "best" seed words, for each ranking alogrithm-decision rule combination. I also highlighted the scores and progression for `tales`, `raile`, and `tares`, which were among the top words based on a composite measure of the three metrics we identified (see next subsection).
 
-First, we notice that the biggest impact on performance was the **ranking algo-decision rule configuration**. Two clear examples of this were (1) GYX scores + popularity vs. letter frequencies and (2) letter frequencies vs. max remaining candidates. In both these examples, all of the seed words using the latter configuration performed better than the best seed word in the former. And this means that using a "lousy" seed word can still result in good performance if you use a good ranking algo / decision rule.
+First, we notice that the biggest impact on performance was the **ranking algo-decision rule configuration**. We see clear differences in the distributions of seed word performance for each of the three metrics. In particular, the Max Remaining Candidates ranking algorithm performed much better than the others, such that the worst performing configuration (due to seed word) was better than the best from all the other ranking algorithms.
 
-Second, we see that the "best" seed words changed ranks across the ranking algo-decision rule configurations. This was more obvious for some than others. For example, `raile` (red) was ranked 13th under the GYX Scores algo, but jumped all the way up to 2nd under the Max Remaining Candidates algo. `tales` (green) ranked within the top two for the GYX Scores and Max Remaining Candidates algos, but ranked 7-8th for the Letter Frequencies algo. This gives us reason to believe that if different algos or variants of these algos were used, we can expect the "best" seed word to change.
+Second, we see that the "best" seed words changed ranks across the ranking algo-decision rule configurations. This was more obvious for some than others. For example, `raile` (red) was ranked 13th for mean steps to reach a solution under the GYX Scores algo, but jumped all the way up to 2nd under the Max Remaining Candidates algo. `tales` (green) ranked within the top two for the GYX Scores and Max Remaining Candidates algos, but ranked 7-8th for the Letter Frequencies algo. This gives us reason to believe that using different algo would probably result in different "best" seed words.
 
-Third, the "best" seed words were not the best for all metrics. In fact, each metric had a different optimal *strategy*. There were, however, good 
+Third, the "best" seed words were not the best for all metrics. In fact, each metric had a different optimal *strategy*. The seed words that performed relatively well across the various ranking algo-decision rule combinations were: <code style="background-color:#7b73f0; color: white;">stare</code>, <code style="background-color:#27ddcb; color: black;">tales</code>, <code style="background-color:#120c6e; color: white;">tares</code>, <code style="background-color:#333f50; color: white;">tores</code>, and <code style="background-color:#F6DC75; color: black;">roate</code>. These are plotted in their respective colours in the charts below.
 
 <figure align="center">
     <img src="results/strat_mean_steps.png">
@@ -303,8 +300,10 @@ Third, the "best" seed words were not the best for all metrics. In fact, each me
     <figcaption>Mean Steps vs. Ranking Algorithm + Decision Rule. Image by author.</figcaption>
 </figure>
 
-### The Best Strategies (So Far)
-Next, we zoom in on the top 5 strategies for each metric. All of them involved the **Max Remaining Candidates** ranking algo and **Baseline** decision rule. The top strategies based on the **average number of steps to reach a solution** metric were:
+### The Best Strategies
+Next, we zoom in on the top 5 strategies for each metric, **among those that we tested**. All of them involved the **Max Remaining Candidates** ranking algo and **Baseline** decision rule. The results show how different seed words are better for different objectives.
+
+The top strategies based on the **average number of steps to reach a solution** were:
 
 | Rank | Seed Word | Ranking Algo | Decision Rule | Mean No. of Steps |
 | :--: | :-------: | :----------: | :-----------: | :---------------: |
@@ -330,34 +329,17 @@ The top strategies by **proportion of challenges solved within 3 steps or less**
 | Rank | Seed Word | Ranking Algo | Decision Rule | % Solved in 3 Steps | Lead Over Next Rank |
 | :--: | :-------: | :----------: | :-----------: | :---------------------: | :-----------------: |
 | 1    | <code style="background-color:#ff5364; color: white;">raile</code> | Max Remaining Candidates | Baseline |  48.12% | 11 words |
-| 2    | <code style="background-color:#120c6e; color: white;">roate</code> | Max Remaining Candidates | Baseline |  47.65% | 12 words |
+| 2    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max Remaining Candidates | Baseline |  47.65% | 12 words |
 | 3    | <code style="background-color:#7b73f0; color: white;">stare</code> | Max Remaining Candidates | Baseline |  47.13% | 3 words |
 | 4    | <code style="background-color:#8497b0; color: white;">soare</code> | Max Remaining Candidates | Baseline |  47.00% | 6 words |
 | 5    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max Remaining Candidates | Baseline |  46.74% | 12 words |
 
-If we had to force fit a "best" strategy, we could combine the scores. I combined the metrics by scaling each one to the range `[0, 1]` and taking the average. The "top" strategies based on this **composite score** were:
 
-| Rank | Seed Word | Ranking Algo | Decision Rule | Composite Score |
-| :--: | :-------: | :----------: | :-----------: | :-------------: |
-| 1    | <code style="background-color:#27ddcb; color: black;">tales</code> | Max Remaining Candidates | Baseline | 96.53% |
-| 2    | <code style="background-color:#ff5364; color: white;">raile</code> | Max Remaining Candidates | Baseline | 95.97% |
-| 3    | <code style="background-color:#120c6e; color: white;">tares</code> | Max Remaining Candidates | Baseline | 93.92% |
-| 4    | <code style="background-color:#333f50; color: white;">tores</code> | Max Remaining Candidates | Baseline | 93.62% |
-| 5    | <code style="background-color:#F6DC75; color: black;">roate</code> | Max Remaining Candidates | Baseline | 93.40% |
+## Conclusion
+In this post, we showed that changing other pieces of a strategy, namely the (1) ranking algorithm and (2) decision rules for prioritising solving vs. information collection affects what the "best" seed word is. The metric in question, be it the (a) average number of steps to reach a solution, (b) success rate, or (c) proportion of challenges solved within 3 steps, is important for determining what "best" means, and therefore also determines what the "best" seed word is.
 
+We tested three algorithms and two decision rules, and these required a lot of backend computation during each simulation run. Clearly, these were tasks for computers, not humans. They gave the Wordle bot perfect information on the solution space and the computing power to evaluate a big chunk of it. It's just not possible for a human to do the same.
 
-## What Does It All Mean?
-As you can probably tell, it isn't easy running the ranking algos and decision rules by hand, or keeping track of all candidates and solutions. If you happen to be able to do these things: hit me up - I need more computing power. More seriously: **the findings from this post and other studies that use similar ranking algos are meant for you**. This is because the tested strategies are designed for solving Wordle with computers, not with limited human cognitive abilities. Bots have perfect information on the solution space and the computing power to evaluate a big chunk of it. It's just not possible for a human to do the same. Hopefully, the strategies in this post can be used as a base to build better bots as measured by the proposed metrics. If not, at least we've tested configurations that didn't work as well.
+Given (1) our conclusion about how the other components of a Wordle strategy and the chosen metrics determine what the optimal seed word is and (2) that these components can't be handled by raw human brainpower, we **cannot simply take "best word" recommendations from this post and similar studies as is**. If you can't play Wordle the way these machines did, the optimal seed words *for you* may be different.
 
-If, however, you're human like the rest of us, then clearly you can't do all these computations on the fly as you play Wordle. Therefore, **take "best word" recommendations from this post and studies like this with a pinch of salt**. If you don't play Wordle like a bot optimised with some ranking algo and decision rules, the optimal seed words may be different. Until there are studies that use more human strategies, 
-
-
-Even though a human could simply take the recommended seed word, we'll show that 
-
-First, the optimal seed word depends a lot on the way you play the game after the first round. Therefore, recommended seed words from any 
-
-
-If you're a computer, you're in luck. You have a stepping stone to design a more powerful algorithm to achieve better overall scores on Wordle.
-
-But, if you're a human, not so much. 
-Just as it would be inappropriate to compare human and computer Wordle players, it is inappropriate to expect that a strategy optimal for a computer is optimal for a human player.
+That said, I understand that for a human player, it is only practical to look at the seed words out of all the results in technicals posts like this. There is still some value for the human player in this study. We saw that there were some words that generally performed well across the three metrics **and** across the various ranking algorithms. They *could* perform well for casual Wordle play. More work is needed to understand why these words work well and verify that they will perform well on a bot that more closely resembles human play. Until that work is completed, I hope the more technical folks in the Wordle community build upon this work and consider using the identified metrics for measuring bot performance.
