@@ -112,9 +112,9 @@ This post attempts to address the abovementioned issues. The aims and key insigh
 
 First, we show that what seed words are "best" depends on the other components of a Wordle strategy:
 
-- The other components of a Wordle strategy are the **ranking algorithm** and the **decision rules for prioritising between solving and info collection**
-- The ranking algorithm heavily influences Wordle performance
-- The chosen **metric** also determines what is best, and therefore, what words are best
+- The other components of a Wordle strategy are the **ranking algorithm** and the **decision rules for prioritising between solving and info collection**.
+- The ranking algorithm heavily influences Wordle performance.
+- The chosen **metric** also determines what is best, and therefore, what words are best.
 
 Second, we introduce several metrics to measure performance and define what "best" is. These were:
 - Average number of steps taken to reach a solution
