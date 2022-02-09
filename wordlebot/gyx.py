@@ -129,6 +129,30 @@ Returns a dataframe with:
 
     return output
 
+def summarise_ncands(df, by='ncands_max'):
+    '''
+Takes the output of `compute_ncands_all` (a dataframe) and summarises the
+results based on the evaluated candidate `word`s. For sorting, choose either
+`ncands_max` or `ncands_mean`. Returns a dataframe with:
+
+1. Candidate
+2. Max number of remaining candidates across a given solution set
+3. Mean number of remaining candidates across a given solution set
+    '''
+
+    df = df.groupby('word').agg({
+        'ncands': ['max', 'mean']
+    }).reset_index()
+    
+    df.columns = ['word', 'ncands_max', 'ncands_mean']
+
+    # Compute ranks
+    df['ncands_max_rank'] = df.ncands_max.rank()
+    df['ncands_mean_rank'] = df.ncands_mean.rank()
+    df = df.sort_values(f'{by}_rank').reset_index(drop=True).head(10)
+
+    return df
+
 def entropy(x):
     '''
 Computes the entropy of a given set of categories. Takes in a Pandas series
@@ -139,39 +163,40 @@ Computes the entropy of a given set of categories. Takes in a Pandas series
     probs = counts / np.sum(counts)
     return -np.sum(probs * np.log(probs))
 
+def compute_fb_single(input_word, solution):
+    fb = get_feedback(input_word, solution)
+    return input_word, solution, fb
 
-def summarise_ncands(df, by='bucket_entropy'):
-    '''
-Takes the output of `compute_ncands_all` (a dataframe) and summarises the
-results based on the evaluated candidate `word`s. For sorting, choose either
-`ncands_max, `bucket_entropy`, or `avg`. Returns a dataframe with:
+def compute_entropy_all(candidate_set, solution_set, parallel=True,
+                        n_jobs=-2, backend='loky', verbose=True):
+    if parallel:
+        all_fb = Parallel(n_jobs=n_jobs, backend=backend, verbose=int(verbose))(
+            delayed(compute_fb_single)(input_word, solution) \
+                for input_word in tqdm(candidate_set.word, disable=not verbose) \
+                for solution in solution_set.word
+        )
+    else:
+        all_fb = []
+        for input_word in tqdm(candidate_set.word, disable=not verbose):
+            for solution in solution_set.word:
+                all_fb.append(compute_fb_single(input_word, solution))
+    
+    output = pd.DataFrame(all_fb, columns=['word', 'solution', 'fb'])
 
-1. Candidate
-2. Max number of remaining candidates across a given solution set
-3. Mean number of remaining candidates across a given solution set
-4. Number of buckets (based on feedback) that remaining candidates are
-    divided into
-5. Entropy across the abovementioned buckets
-    '''
+    return output
 
+def summarise_entropy(df):
     df = df.groupby('word').agg({
-        'ncands': ['max', 'mean'],
-        'fb': [('nbuckets', pd.Series.nunique),
-               ('bucket_entropy', entropy)]
+        'fb': [
+            # ('nbuckets', pd.Series.nunique),
+            ('fb_entropy', entropy)
+        ]
     }).reset_index()
     
-    df.columns = ['word', 'ncands_max', 'ncands_mean', 'nbuckets', 'bucket_entropy']
+    df.columns = ['word', 'fb_entropy']
 
-    # Compute ranks
-    df['ncands_max_rank'] = df.ncands_max.rank()
-    df['ncands_mean_rank'] = df.ncands_mean.rank()
-    df['bucket_entropy_rank'] = df.bucket_entropy.rank(ascending=False)
-    df['avg_rank'] = df[['ncands_max_rank', 'bucket_entropy_rank']].mean(axis=1)
-    df = df.sort_values(f'{by}_rank').reset_index(drop=True).head(10)
-
+    df = df.sort_values('fb_entropy', ascending=False)
     return df
-
-
 
 # *-----------------------------------------*
 # | VECTORISED FUNCTIONS FOR GYX AND NCANDS |

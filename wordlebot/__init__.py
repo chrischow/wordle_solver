@@ -149,7 +149,8 @@ the alphabet in that word.
 # *------------*
 # | GAME CLASS |
 # *------------*
-from wordlebot.gyx import get_gyx_scores_all, compute_ncands_all, summarise_ncands
+from wordlebot.gyx import get_gyx_scores_all, compute_ncands_all, summarise_ncands, compute_entropy_all, \
+    summarise_entropy
 from wordlebot.lf import compute_letter_frequencies, compute_lf_score
 
 class Wordle():
@@ -160,7 +161,7 @@ class Wordle():
         self.candidates = candidates
         self.solutions = solutions
         self.optimisations = {}
-        self.last_optimised = {'ncands': -1, 'lf': -1, 'expected_gyx': -1}
+        self.last_optimised = {'ncands': -1, 'lf': -1, 'expected_gyx': -1, 'fb_entropy': -1}
         self.step = 0
         self.solved = False
         self.verbose = verbose
@@ -177,7 +178,7 @@ class Wordle():
         self.candidates = candidates
         self.solutions = solutions
         self.optimisations = {}
-        self.last_optimised = {'ncands': -1, 'lf': -1, 'expected_gyx': -1}
+        self.last_optimised = {'ncands': -1, 'lf': -1, 'expected_gyx': -1, 'fb_entropy': -1}
         self.step = 0
         self.solved = False
         self.verbose = verbose
@@ -258,8 +259,8 @@ class Wordle():
             else:
                 print('No data to display.')
         
-    def optimise(self, method='ncands', n_jobs=-2, backend='loky', by='bucket_entropy'):
-        if not method in ['ncands', 'lf', 'expected_gyx']:
+    def optimise(self, method='ncands', n_jobs=-2, backend='loky', by='ncands_max'):
+        if not method in ['ncands', 'lf', 'expected_gyx', 'fb_entropy']:
             raise ValueError('Please choose `ncands`, `lf`, or `expected_gyx`.')
         
         if self.solved:
@@ -285,7 +286,15 @@ class Wordle():
                                            n_jobs=n_jobs, backend=backend,
                                            verbose=self.verbose)
             df = summarise_ncands(df_scores, by=by)
-
+        
+        elif method == 'fb_entropy':
+            
+            df_scores = compute_entropy_all(candidate_set=candidates,
+                                           solution_set=self.solutions,
+                                           n_jobs=n_jobs, backend=backend,
+                                           verbose=self.verbose)
+            df = summarise_entropy(df_scores)
+        
         elif method == 'expected_gyx':
             # Compute scores
             df = get_gyx_scores_all(candidate_set=candidates, solution_set=self.solutions,
