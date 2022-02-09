@@ -187,7 +187,7 @@ This algorithm ranks words by how popular its constituent letters are:
 4. Pick the candidate with the highest score
 
 <figure align="center">
-    <img src="images/exp_lf.jpg">
+    <img src="images/exp_lf.png">
     <figcaption>Letter frequency scores. Image by author. </figcaption>
 </figure>
 
