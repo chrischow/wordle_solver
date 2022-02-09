@@ -1,4 +1,4 @@
-# Lost for Words: Why the "Best" Wordle Seed Words Aren't Really the Best
+# Loaded Words: Why the "Best" Wordle Seed Words Aren't Really the Best
 Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, and that's when I discovered [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - not so much in playing the game the human way, but in developing a system to try to play optimally. As I read up on existing work by other authors, I found an overwhelming emphasis on starting/seed words. Yet, there were conflicting recommendations for the best ones to use. 
 There was clearly more to optimal play than the seed word! The key contribution of this post is to explain why we ought to take "best" Wordle seed words with a pinch of salt, by showing that other components of a Wordle strategy affect what the best seed words are.
 
