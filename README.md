@@ -296,17 +296,17 @@ Second, we see that the "best" seed words changed ranks when different **ranking
 Third, the "best" seed words were not the best for all **metrics**. In fact, each metric had a different optimal *strategy*. The seed words that performed relatively well across the various ranking algos were: <code style="background-color:#7b73f0; color: white;">stare</code>, <code style="background-color:#27ddcb; color: black;">tales</code>, <code style="background-color:#120c6e; color: white;">tares</code>, <code style="background-color:#333f50; color: white;">tores</code>, and <code style="background-color:#F6DC75; color: black;">roate</code>. These are plotted in their respective colours in the charts below.
 
 <figure align="center">
-    <img src="results/strat_mean_steps.png">
+    <img src="results/strat_mean_steps_hi-res.png">
     <figcaption>Mean Steps vs. Ranking Algorithm + Decision Rule. Image by author.</figcaption>
 </figure>
 
 <figure align="center">
-    <img src="results/strat_success_rate.png">
+    <img src="results/strat_success_rate_hi-res.png">
     <figcaption>Mean Steps vs. Ranking Algorithm + Decision Rule. Image by author.</figcaption>
 </figure>
 
 <figure align="center">
-    <img src="results/strat_3steps.png">
+    <img src="results/strat_3-steps_or_less_hi-res.png">
     <figcaption>Mean Steps vs. Ranking Algorithm + Decision Rule. Image by author.</figcaption>
 </figure>
 
