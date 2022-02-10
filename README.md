@@ -106,106 +106,6 @@ Numerous articles have been written on the subject. Most authors used simulation
     <tbody>
 </table>
 
-For Medium:
-
-<table>
-    <thead>
-        <th style="text-align: center;">S/N</th>
-        <th style="text-align: center;">Source</th>
-        <th style="text-align: center;">Ranking Algorithm</th>
-        <th style="text-align: center;">Recommended Seed Word</th>
-        <th style="text-align: center;">Average No. of Steps</th>
-        <th style="text-align: center;">Success Rate</th>
-    </thead>
-    <tbody>
-        <tr>
-            <td style="text-align: center;">1</td>
-            <td style="text-align: center;" rowspan=3>Barry Smyth [2]</td>
-            <td rowspan=3>Minimum set covers, coverage, entropy, and letter frequencies</td>
-            <td><code>tales</code></td>
-            <td style="text-align: center;">3.66</td>
-            <td style="text-align: center;">>95%</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">2</td>
-            <td>Two words: <code>cones-trial</code></td>
-            <td style="text-align: center;">3.68</td>
-            <td style="text-align: center;">96%</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">3</td>
-            <td>Three words: <code>hates-round-climb</code></td>
-            <td style="text-align: center;">3.68</td>
-            <td style="text-align: center;">96%</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">4</td>
-            <td style="text-align: center;" rowspan=3>Tyler Glaiel [3]</td>
-            <td rowspan=2>Expected remaining candidates</td>
-            <td><code>roate</code></td>
-            <td style="text-align: center;">3.494</td>
-            <td style="text-align: center;">100%</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">5</td>
-            <td><code>raise</code></td>
-            <td style="text-align: center;">3.495</td>
-            <td style="text-align: center;">Not Provided</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">6</td>
-            <td>Expected green / yellow / grey tile scores</td>
-            <td><code>soare</code></td>
-            <td style="text-align: center;">3.69</td>
-            <td style="text-align: center;">Not Provided</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">7</td>
-            <td style="text-align: center;">Tom Neill [4]</td>
-            <td>Expected remaining candidates</td>
-            <td><code>roate</code></td>
-            <td style="text-align: center;">Not Provided</td>
-            <td style="text-align: center;">Not Provided</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">8</td>
-            <td style="text-align: center;">Sejal Dua [5]</td>
-            <td>Average green / yellow / grey tile scores</td>
-            <td>
-                <code>soare</code>, <code>stare</code>, <code>roate</code>, <code>raile</code>, <code>arose</code>
-            </td>
-            <td style="text-align: center;">N.A.</td>
-            <td style="text-align: center;">N.A.</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">9</td>
-            <td style="text-align: center;">Behrouz Bakhtiari [6]</td>
-            <td>Letter frequencies</td>
-            <td><code>aries</code></td>
-            <td style="text-align: center;">N.A.</td>
-            <td style="text-align: center;">N.A.</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">10</td>
-            <td style="text-align: center;">John Stechschulte [7]</td>
-            <td>Information entropy for expected green / yellow scores</td>
-            <td>
-                <code>tares</code>, <code>lares</code>, <code>rales</code>, <code>rates</code>, <code>nares</code>, <code>tales</code>, <code>tores</code>, <code>reais</code>,
-                <code>dares</code>, <code>arles</code>, <code>lores</code>
-            </td>
-            <td style="text-align: center;">N.A.</td>
-            <td style="text-align: center;">N.A.</td>
-        </tr>
-        <tr>
-            <td style="text-align: center;">11</td>
-            <td style="text-align: center;">Mark M Liu [8]</td>
-            <td>Information entropy  for expected green / yellow scores</td>
-            <td><code>tares</code></td>
-            <td style="text-align: center;">N.A.</td>
-            <td style="text-align: center;">N.A.</td>
-        </tr>
-    <tbody>
-</table>
 
 Wordle is a relatively recent game, and covering the entire solution space requires a great deal of effort and computing power. Therefore, there are numerous ideas left to explore and issues to address. The first issue is that optimal play is a little more complex than just seed words, as the more holistic studies (mainly [Smyth](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb)) have hinted. The second issue is that there were varying definitions of "best", and not all studies included sufficient metrics to measure the strategies' performance.
 
@@ -248,7 +148,7 @@ We can see that a strategy is more than just the seed word. It also includes (1)
 
 > **Note:** We can actually remove seed words as a strategy component altogether if we apply the ranking algorithm before the start of the game to rank the entire set of candidates. In fact, this is what the authors in sources 8-11 above did.
 
-## A Wordle Bot
+## Simulating Wordle
 
 ### Overview
 My Wordle bot follows the broad strategy and implements the two other components of the strategy: the decision rules and a ranking algorithm for choosing words.
@@ -336,7 +236,7 @@ The baseline decision rule was that we would only guess solution words if there 
 
 The only other optional decision rule tested was to choose words purely by popularity as measured by word frequencies in Wikipedia articles (source: [Lexipedia](https://en.lexipedia.org/)). The rule kicked in when there were only 10 solutions left, and was **slapped on top of the baseline rule**. I chose a threshold of 10 remaining solutions arbitrarily, though I'm sure there's a better way to choose this number. Under this rule, the bot would guess the most popular word among the remaining solutions.
 
-## Simulations
+### Simulation Configurations
 I ran each of the words recommended by the various sources from the previous section (see below) against the full set of 2,315 solution words **5 times** - one per ranking algo / decision rule configuration.
 
 Seed words:
@@ -368,7 +268,7 @@ Overall, that's 17 "best" words by 5 strategies by 2,315 solution words for a to
 From here on out, I will refer to the combination of ranking algorithms and decision rules as just **ranking algorithms/algos** for simplicity, since the ranking algorithms are primarily responsible for progress in the game.
 
 ### Metrics
-We now jump ahead to the proposed metrics before discussing the simulation results. To allow other authors to make comparisons to the strategies tested, I identified three metrics to measure every strategy (seed word + ranking algo):
+Finally, before we discuss the simulation results, these are the proposed metrics to allow other authors to make comparisons to the strategies tested:
 
 1. Average number of steps taken to reach a solution
 2. Solution success rate
@@ -455,3 +355,15 @@ That said, it is only practical for a human player to focus on seed words becaus
 In this post, we showed that changing other pieces of a strategy, namely the (1) ranking algorithm and (2) decision rules for prioritising between solving vs. information collection affect what the "best" seed word is. The metric in question, be it the (a) average number of steps to reach a solution, (b) success rate, or (c) proportion of challenges solved within 3 steps, is important for determining what "best" means, and by extension, what the "best" seed word is.
 
 Based on these conclusions, we should not simply accept seed word recommendations that were generated based on outcomes from simulated games played with inhuman bots. A deeper dive is needed to identify words that work well regardless of who - or what - is using them and how the game is being played.
+
+---
+
+### References
+1. J. Wardle, [Wordle](https://www.powerlanguage.co.uk/wordle/) (2020), powerlanguage.co.uk.
+2. B. Smyth, [What I Learned from Playing More than a Million Games of Wordle](https://towardsdatascience.com/what-i-learned-from-playing-more-than-a-million-games-of-wordle-7b69a40dbfdb) (2022), Towards Data Science.
+3. T. Glaiel, [The mathematically optimal first guess in Wordle](https://medium.com/@tglaiel/the-mathematically-optimal-first-guess-in-wordle-cbcb03c19b0a) (2021), Medium.
+4. T. Neill, [Ruining the fun: a Wordle auto-solver](https://notfunatparties.substack.com/p/wordle-solver) (2022), Not Fun at Parties.
+5. S. Dua, [A Deep Dive into Wordle, the New Pandemic Puzzle Craze](https://towardsdatascience.com/a-deep-dive-into-wordle-the-new-pandemic-puzzle-craze-9732d97bf723) (2022), Towards Data Science.
+6. B. Bakhtiari, [A word on Wordle](https://towardsdatascience.com/a-frequency-analysis-on-wordle-9c5778283363) (2022), Towards Data Science.
+7. J. Stechschulte, [🟩🟩🟩🟩🟩 Optimal Wordle](https://towardsdatascience.com/optimal-wordle-d8c2f2805704) (2022), Towards Data Science.
+8. M. M. Liu, [What in the wordle?](https://markmliu.medium.com/what-in-the-wordle-5dc5ed94fe2) (2022), Medium.
