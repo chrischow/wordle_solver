@@ -1,5 +1,6 @@
 # Loaded Words: Why the "Best" Wordle Seed Words Aren't Really the Best
-Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, and that's when I discovered [Wordle](https://www.powerlanguage.co.uk/wordle/). I was hooked - not so much in playing the game the human way, but in developing a system to try to play optimally. As I read up on existing work by other authors, I found an overwhelming emphasis on starting/seed words. Yet, there were conflicting recommendations for the best ones to use. 
+Over the past few weeks, I noticed more and more green, yellow, and black/white grids posted on Facebook, and that's when I discovered [Wordle](https://www.powerlanguage.co.uk/wordle/) [1]. I was hooked - not so much in playing the game the human way, but in developing a system to try to play optimally. As I read up on existing work by other authors, I found an overwhelming emphasis on starting/seed words. Yet, there were conflicting recommendations for the best ones to use. 
+
 There was clearly more to optimal play than the seed word! The key contribution of this post is to explain why we ought to take "best" Wordle seed words with a pinch of salt, by showing that other components of a Wordle strategy affect what these are.
 
 ## The Word on Wordle
@@ -97,6 +98,107 @@ Numerous articles have been written on the subject. Most authors used simulation
         <tr>
             <td style="text-align: center;">11</td>
             <td style="text-align: center;"><a href="https://markmliu.medium.com/what-in-the-wordle-5dc5ed94fe2" target="_blank">Mark M Liu</td>
+            <td>Information entropy  for expected green / yellow scores</td>
+            <td><code>tares</code></td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+        </tr>
+    <tbody>
+</table>
+
+For Medium:
+
+<table>
+    <thead>
+        <th style="text-align: center;">S/N</th>
+        <th style="text-align: center;">Source</th>
+        <th style="text-align: center;">Ranking Algorithm</th>
+        <th style="text-align: center;">Recommended Seed Word</th>
+        <th style="text-align: center;">Average No. of Steps</th>
+        <th style="text-align: center;">Success Rate</th>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="text-align: center;">1</td>
+            <td style="text-align: center;" rowspan=3>Barry Smyth [2]</td>
+            <td rowspan=3>Minimum set covers, coverage, entropy, and letter frequencies</td>
+            <td><code>tales</code></td>
+            <td style="text-align: center;">3.66</td>
+            <td style="text-align: center;">>95%</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">2</td>
+            <td>Two words: <code>cones-trial</code></td>
+            <td style="text-align: center;">3.68</td>
+            <td style="text-align: center;">96%</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">3</td>
+            <td>Three words: <code>hates-round-climb</code></td>
+            <td style="text-align: center;">3.68</td>
+            <td style="text-align: center;">96%</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">4</td>
+            <td style="text-align: center;" rowspan=3>Tyler Glaiel [3]</td>
+            <td rowspan=2>Expected remaining candidates</td>
+            <td><code>roate</code></td>
+            <td style="text-align: center;">3.494</td>
+            <td style="text-align: center;">100%</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">5</td>
+            <td><code>raise</code></td>
+            <td style="text-align: center;">3.495</td>
+            <td style="text-align: center;">Not Provided</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">6</td>
+            <td>Expected green / yellow / grey tile scores</td>
+            <td><code>soare</code></td>
+            <td style="text-align: center;">3.69</td>
+            <td style="text-align: center;">Not Provided</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">7</td>
+            <td style="text-align: center;">Tom Neill [4]</td>
+            <td>Expected remaining candidates</td>
+            <td><code>roate</code></td>
+            <td style="text-align: center;">Not Provided</td>
+            <td style="text-align: center;">Not Provided</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">8</td>
+            <td style="text-align: center;">Sejal Dua [5]</td>
+            <td>Average green / yellow / grey tile scores</td>
+            <td>
+                <code>soare</code>, <code>stare</code>, <code>roate</code>, <code>raile</code>, <code>arose</code>
+            </td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">9</td>
+            <td style="text-align: center;">Behrouz Bakhtiari [6]</td>
+            <td>Letter frequencies</td>
+            <td><code>aries</code></td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">10</td>
+            <td style="text-align: center;">John Stechschulte [7]</td>
+            <td>Information entropy for expected green / yellow scores</td>
+            <td>
+                <code>tares</code>, <code>lares</code>, <code>rales</code>, <code>rates</code>, <code>nares</code>, <code>tales</code>, <code>tores</code>, <code>reais</code>,
+                <code>dares</code>, <code>arles</code>, <code>lores</code>
+            </td>
+            <td style="text-align: center;">N.A.</td>
+            <td style="text-align: center;">N.A.</td>
+        </tr>
+        <tr>
+            <td style="text-align: center;">11</td>
+            <td style="text-align: center;">Mark M Liu [8]</td>
             <td>Information entropy  for expected green / yellow scores</td>
             <td><code>tares</code></td>
             <td style="text-align: center;">N.A.</td>
