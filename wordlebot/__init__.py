@@ -5,6 +5,7 @@ import json
 import numpy as np
 import pandas as pd
 
+from collections import Counter
 from joblib import Parallel, delayed
 from tqdm.notebook import tqdm
 
@@ -319,6 +320,26 @@ class Wordle():
             'feedback': self.feedback,
             'ncands': self.ncands
         }
+
+    def split_duplicates(self):
+        nonunique = self.solutions[[f'p{i}' for i in range(5)]].nunique() > 1
+    
+        if nonunique.sum() > 2:
+            return
+        else:
+            nonunique_cols = nonunique.index[nonunique]
+            unique_cols = nonunique.index[~nonunique]
+            
+        unique_letters = np.unique(self.solutions[unique_cols].values.flatten())
+        nonunique_letters = Counter(self.solutions[nonunique_cols].values.flatten())
+        nonunique_letters = {k: v for k, v in nonunique_letters.items() if not k in unique_letters}
+        
+        cands = self.candidates[['word']].copy()
+        cands['scores'] = 0
+        for l,counts in nonunique_letters.items():
+            cands['scores'] = cands['scores'] + cands.word.str.contains(l).astype(int) * counts
+            
+        return cands.sort_values('scores', ascending=False).head(10)
 
     def reprioritise(self, plugin='popularity', data=None):
         if plugin == 'popularity':

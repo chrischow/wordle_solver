@@ -367,3 +367,4 @@ Based on these conclusions, we should not simply accept seed word recommendation
 6. B. Bakhtiari, [A word on Wordle](https://towardsdatascience.com/a-frequency-analysis-on-wordle-9c5778283363) (2022), Towards Data Science.
 7. J. Stechschulte, [🟩🟩🟩🟩🟩 Optimal Wordle](https://towardsdatascience.com/optimal-wordle-d8c2f2805704) (2022), Towards Data Science.
 8. M. M. Liu, [What in the wordle?](https://markmliu.medium.com/what-in-the-wordle-5dc5ed94fe2) (2022), Medium.
+9. [Lexipedia](https://en.lexipedia.org/)
